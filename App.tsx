@@ -2661,6 +2661,81 @@ export default function App() {
             />
           </View>
 
+          <Text style={styles.workoutPlanSectionTitle}>This week</Text>
+
+          <View style={styles.weekCalendar}>
+            {WEEKDAYS.map((day) => {
+              const plannedSession =
+                weeklySessions.find((session) => session.day === day) ?? null;
+              const completed =
+                !!plannedSession &&
+                completedPlanSessionIds.includes(plannedSession.id);
+              const isToday = day === todayWeekday;
+
+              return (
+                <TouchableOpacity
+                  key={day}
+                  disabled={!plannedSession}
+                  style={[
+                    styles.weekCalendarDay,
+                    plannedSession && styles.weekCalendarDayPlanned,
+                    completed && styles.weekCalendarDayCompleted,
+                    isToday && styles.weekCalendarDayToday,
+                  ]}
+                  onPress={() =>
+                    plannedSession && openPlanSessionDetails(plannedSession)
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.weekCalendarLabel,
+                      plannedSession && styles.weekCalendarLabelPlanned,
+                      completed && styles.weekCalendarLabelCompleted,
+                    ]}
+                  >
+                    {day}
+                  </Text>
+
+                  <View
+                    style={[
+                      styles.weekCalendarDot,
+                      plannedSession && styles.weekCalendarDotPlanned,
+                      completed && styles.weekCalendarDotCompleted,
+                    ]}
+                  />
+
+                  <Text
+                    style={[
+                      styles.weekCalendarStatus,
+                      plannedSession && styles.weekCalendarStatusPlanned,
+                      completed && styles.weekCalendarStatusCompleted,
+                    ]}
+                  >
+                    {completed ? "Done" : plannedSession ? "Train" : "Rest"}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {nextPlanSession && (
+            <TouchableOpacity
+              style={styles.nextSessionCard}
+              onPress={() => openPlanSessionDetails(nextPlanSession)}
+            >
+              <View style={styles.nextSessionTextWrap}>
+                <Text style={styles.nextSessionLabel}>NEXT PLANNED SESSION</Text>
+                <Text style={styles.nextSessionTitle}>
+                  {nextPlanSession.day} • {nextPlanSession.title}
+                </Text>
+                <Text style={styles.nextSessionMeta}>
+                  {nextPlanSession.focus} • {nextPlanSession.exercises.length} exercises
+                </Text>
+              </View>
+              <Text style={styles.nextSessionArrow}>›</Text>
+            </TouchableOpacity>
+          )}
+
           <Text style={styles.workoutPlanSectionTitle}>Planned sessions</Text>
 
           {weeklySessions.map((session, index) => {
@@ -5288,6 +5363,128 @@ const styles = StyleSheet.create({
     height: "100%",
     borderRadius: 8,
     backgroundColor: COLORS.green,
+  },
+
+  weekCalendar: {
+    flexDirection: "row",
+    gap: 6,
+    marginBottom: 14,
+  },
+
+  weekCalendarDay: {
+    flex: 1,
+    minHeight: 76,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+  },
+
+  weekCalendarDayPlanned: {
+    borderColor: "#344716",
+    backgroundColor: "#11170C",
+  },
+
+  weekCalendarDayCompleted: {
+    borderColor: "#4C711D",
+    backgroundColor: "#17200F",
+  },
+
+  weekCalendarDayToday: {
+    borderWidth: 2,
+    borderColor: COLORS.green,
+  },
+
+  weekCalendarLabel: {
+    color: COLORS.muted,
+    fontSize: 10,
+    fontWeight: "900",
+  },
+
+  weekCalendarLabelPlanned: {
+    color: COLORS.white,
+  },
+
+  weekCalendarLabelCompleted: {
+    color: COLORS.green,
+  },
+
+  weekCalendarDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#3A3A3A",
+    marginVertical: 7,
+  },
+
+  weekCalendarDotPlanned: {
+    backgroundColor: COLORS.green,
+  },
+
+  weekCalendarDotCompleted: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: COLORS.green,
+  },
+
+  weekCalendarStatus: {
+    color: COLORS.muted,
+    fontSize: 8,
+    fontWeight: "800",
+  },
+
+  weekCalendarStatusPlanned: {
+    color: COLORS.white,
+  },
+
+  weekCalendarStatusCompleted: {
+    color: COLORS.green,
+  },
+
+  nextSessionCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.cardSoft,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 18,
+    padding: 15,
+    marginBottom: 22,
+  },
+
+  nextSessionTextWrap: {
+    flex: 1,
+  },
+
+  nextSessionLabel: {
+    color: COLORS.green,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.9,
+  },
+
+  nextSessionTitle: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "900",
+    marginTop: 4,
+  },
+
+  nextSessionMeta: {
+    color: COLORS.muted,
+    fontSize: 11,
+    marginTop: 4,
+  },
+
+  nextSessionArrow: {
+    color: COLORS.green,
+    fontSize: 28,
+    fontWeight: "500",
+    marginLeft: 10,
   },
 
   workoutPlanSectionTitle: {
