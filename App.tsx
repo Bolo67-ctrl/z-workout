@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   SafeAreaView,
   ScrollView,
+  Image,
   StyleSheet,
   Text,
   TextInput,
@@ -171,6 +172,28 @@ const EQUIPMENT = [
   "Pull-Up Bar",
   "Kettlebell",
 ];
+
+const EXERCISE_DEMOS: Record<
+  string,
+  { uri: string; credit: string }
+> = {
+  "Push-Ups": {
+    uri: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Pushups.gif",
+    credit: "Wensceslao • Wikimedia Commons • CC BY-SA 4.0",
+  },
+  "Bodyweight Squats": {
+    uri: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Squats.gif",
+    credit: "Wensceslao • Wikimedia Commons • CC BY-SA 4.0",
+  },
+  "Calf Raises": {
+    uri: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Standing-calf-raises-1.gif",
+    credit: "Everkinetic • Wikimedia Commons • CC BY-SA 3.0",
+  },
+  "Lat Pulldown": {
+    uri: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Wide-grip-lat-pull-down-1.gif",
+    credit: "Everkinetic • Wikimedia Commons • CC BY-SA 3.0",
+  },
+};
 
 const EXERCISE_LIBRARY: ExerciseLibraryItem[] = [
   {
@@ -1484,204 +1507,221 @@ export default function App() {
       return items.slice(0, maxExercises);
     };
 
-    let templates: Omit<WorkoutPlanSession, "id">[];
+    const bodyweightChest: WorkoutExercise[] = [
+      { name: "Push-Ups", target: "2–3 × 6–12", focus: "Chest + arms", cue: "Choose a version you can do with smooth form." },
+      { name: "Shoulder Wall Slides", target: "2 × 8–10", focus: "Shoulders", cue: "Use a comfortable range." },
+      { name: "Dead Bug", target: "2 × 8 each side", focus: "Core", cue: "Move slowly and stay controlled." },
+      { name: "Plank", target: "2 × 20–30 sec", focus: "Core + shoulders", cue: "Finish before your form breaks down." },
+    ];
+
+    const bodyweightLegs: WorkoutExercise[] = [
+      { name: "Bodyweight Squats", target: "2–3 × 10–15", focus: "Legs", cue: "Use a comfortable depth." },
+      { name: "Reverse Lunges", target: "2 × 6–8 each side", focus: "Legs + balance", cue: "Use support if needed." },
+      { name: "Glute Bridges", target: "2–3 × 10–15", focus: "Hips", cue: "Pause briefly at the top." },
+      { name: "Calf Raises", target: "2 × 10–15", focus: "Calves", cue: "Use a wall or chair for balance." },
+      { name: "Bodyweight Squat Hold", target: "2 × 20–30 sec", focus: "Hips + ankles", cue: "Hold a comfortable position." },
+    ];
+
+    const coreMobility: WorkoutExercise[] = [
+      { name: "Dead Bug", target: "2 × 6–8 each side", focus: "Core", cue: "Move slowly and stay controlled." },
+      { name: "Bird Dog", target: "2 × 6–8 each side", focus: "Core + back", cue: "Reach without twisting." },
+      { name: "Plank", target: "2 × 20–30 sec", focus: "Core", cue: "Stop before your form breaks down." },
+      { name: "Cat-Cow", target: "2 × 6–8 slow reps", focus: "Spine", cue: "Keep the motion gentle." },
+      { name: "Shoulder Wall Slides", target: "2 × 8–10", focus: "Shoulders", cue: "Do not force the range." },
+      { name: "Bodyweight Squat Hold", target: "2 × 20–30 sec", focus: "Hips + ankles", cue: "Use support if needed." },
+    ];
+
+    const mobilityReset: WorkoutExercise[] = [
+      { name: "Cat-Cow", target: "2 × 6–8 slow reps", focus: "Spine", cue: "Move slowly through a comfortable range." },
+      { name: "Shoulder Wall Slides", target: "2 × 8–10", focus: "Shoulders", cue: "Keep the motion smooth." },
+      { name: "Bird Dog", target: "2 × 6–8 each side", focus: "Core + back", cue: "Move without twisting." },
+      { name: "Glute Bridges", target: "2 × 10–12", focus: "Hips", cue: "Use a smooth range." },
+      { name: "Bodyweight Squat Hold", target: "2 × 20–30 sec", focus: "Hips + ankles", cue: "Use support if needed." },
+    ];
+
+    const hasDumbbells =
+      equipment.includes("Dumbbells") || equipment.includes("Kettlebell");
+    const hasBoard = equipment.includes("Push-Up Board");
+    const useGym = workoutPlace === "gym";
+
+    const chestShoulders: WorkoutExercise[] = useGym
+      ? [
+          { name: "Chest Press Machine", target: "2–3 × 8–12", focus: "Chest", cue: "Adjust the seat comfortably and press smoothly." },
+          { name: "Machine Shoulder Press", target: "2 × 8–10", focus: "Shoulders", cue: "Use a load you can control." },
+          { name: "Push-Ups", target: "2 × 6–10", focus: "Chest + arms", cue: "Choose a comfortable variation." },
+          { name: "Dead Bug", target: "2 × 8 each side", focus: "Core", cue: "Keep the movement controlled." },
+        ]
+      : hasDumbbells
+      ? [
+          { name: "Floor Press", target: "2–3 × 8–12", focus: "Chest", cue: "Control every rep." },
+          { name: "Standing Shoulder Press", target: "2 × 8–10", focus: "Shoulders", cue: "Avoid leaning back." },
+          { name: "Push-Ups", target: "2 × 6–10", focus: "Chest + arms", cue: "Use an easier version if needed." },
+          { name: "Dead Bug", target: "2 × 8 each side", focus: "Core", cue: "Move slowly." },
+        ]
+      : hasBoard
+      ? [
+          { name: "Push-Up Board Chest Press", target: "2–3 × 8–12", focus: "Chest", cue: "Use a comfortable handle position." },
+          { name: "Push-Up Board Triceps", target: "2 × 8–12", focus: "Arms", cue: "Keep your body controlled." },
+          { name: "Shoulder Wall Slides", target: "2 × 8–10", focus: "Shoulders", cue: "Use a comfortable range." },
+          { name: "Dead Bug", target: "2 × 8 each side", focus: "Core", cue: "Move slowly." },
+        ]
+      : bodyweightChest;
+
+    const legsHips: WorkoutExercise[] = useGym
+      ? [
+          { name: "Leg Press", target: "2–3 × 8–12", focus: "Legs", cue: "Use a comfortable range and smooth reps." },
+          { name: "Seated Leg Curl", target: "2 × 10–12", focus: "Hamstrings", cue: "Keep the movement controlled." },
+          { name: "Glute Bridges", target: "2 × 10–15", focus: "Hips", cue: "Pause briefly at the top." },
+          { name: "Calf Raises", target: "2 × 10–15", focus: "Calves", cue: "Use support if needed." },
+          { name: "Reverse Lunges", target: "2 × 6 each side", focus: "Legs + balance", cue: "Use support if needed." },
+        ]
+      : hasDumbbells
+      ? [
+          { name: "Goblet Squat", target: "2–3 × 8–12", focus: "Legs", cue: "Use a manageable weight." },
+          { name: "Romanian Deadlift", target: "2 × 8–12", focus: "Hamstrings + hips", cue: "Keep the weight close and use a comfortable range." },
+          { name: "Reverse Lunges", target: "2 × 6–8 each side", focus: "Legs", cue: "Use support if needed." },
+          { name: "Glute Bridges", target: "2 × 10–15", focus: "Hips", cue: "Move smoothly." },
+          { name: "Calf Raises", target: "2 × 10–15", focus: "Calves", cue: "Use support for balance." },
+        ]
+      : bodyweightLegs;
+
+    const backArms: WorkoutExercise[] = useGym
+      ? [
+          { name: "Lat Pulldown", target: "2–3 × 8–12", focus: "Back + arms", cue: "Pull smoothly without swinging." },
+          { name: "Cable Row", target: "2–3 × 8–12", focus: "Back", cue: "Sit tall and avoid jerking the handle." },
+          { name: "Machine Shoulder Press", target: "2 × 8–10", focus: "Shoulders + arms", cue: "Use a comfortable range." },
+          { name: "Bird Dog", target: "2 × 8 each side", focus: "Back + core", cue: "Move slowly." },
+        ]
+      : hasDumbbells
+      ? [
+          { name: "One-Arm Row", target: "2–3 × 8–12 each side", focus: "Back + arms", cue: "Keep your torso steady." },
+          { name: "Standing Shoulder Press", target: "2 × 8–10", focus: "Shoulders + arms", cue: "Press smoothly." },
+          { name: "Bird Dog", target: "2 × 8 each side", focus: "Back + core", cue: "Do not twist." },
+          { name: "Plank", target: "2 × 20–30 sec", focus: "Core + shoulders", cue: "Stop before form breaks down." },
+        ]
+      : hasBoard
+      ? [
+          { name: "Push-Up Board Triceps", target: "2–3 × 8–12", focus: "Arms", cue: "Use a comfortable board setup." },
+          { name: "Bird Dog", target: "2 × 8 each side", focus: "Back + core", cue: "Move without twisting." },
+          { name: "Shoulder Wall Slides", target: "2 × 8–10", focus: "Upper back + shoulders", cue: "Use a comfortable range." },
+          { name: "Plank", target: "2 × 20–30 sec", focus: "Core + shoulders", cue: "Finish before your form breaks down." },
+        ]
+      : [
+          { name: "Bird Dog", target: "2–3 × 8 each side", focus: "Back + core", cue: "Reach slowly without twisting." },
+          { name: "Shoulder Wall Slides", target: "2 × 8–10", focus: "Upper back + shoulders", cue: "Use a comfortable range." },
+          { name: "Push-Ups", target: "2 × 6–10", focus: "Arms + shoulders", cue: "Choose a comfortable variation." },
+          { name: "Plank", target: "2 × 20–30 sec", focus: "Core + shoulders", cue: "Stop before form breaks down." },
+        ];
+
+    const balancedTechnique: WorkoutExercise[] = [
+      ...chestShoulders.slice(0, 2),
+      ...legsHips.slice(0, 2),
+      ...coreMobility.slice(0, 2),
+    ];
+
+    let focusTemplates: Omit<WorkoutPlanSession, "id" | "day">[];
 
     if (goal === "mobility") {
-      templates = [
+      focusTemplates = [
         {
-          title: "Mobility Reset",
-          focus: "Full-body mobility",
-          emoji: "🧘",
-          exercises: [
-            { name: "Cat-Cow", target: "2 × 6–8 slow reps", focus: "Spine", cue: "Move slowly through a comfortable range." },
-            { name: "Shoulder Wall Slides", target: "2 × 8–10", focus: "Shoulders", cue: "Do not force your arms higher." },
-            { name: "Bodyweight Squat Hold", target: "2 × 20–30 sec", focus: "Hips + ankles", cue: "Hold support if that feels better." },
-            { name: "Bird Dog", target: "2 × 6–8 each side", focus: "Core + back", cue: "Move slowly without twisting." },
-            { name: "Glute Bridge", target: "2 × 10–12", focus: "Hips", cue: "Use a smooth comfortable range." },
-            { name: "Dead Bug", target: "2 × 6–8 each side", focus: "Core", cue: "Keep the movement controlled." },
-          ],
-        },
-        {
-          title: "Hips & Core Flow",
-          focus: "Hips, legs, and core",
-          emoji: "🌿",
-          exercises: [
-            { name: "Glute Bridge", target: "2 × 10–12", focus: "Hips", cue: "Pause briefly at the top." },
-            { name: "Reverse Lunges", target: "2 × 6 each side", focus: "Hips + legs", cue: "Use support if you need balance." },
-            { name: "Dead Bug", target: "2 × 6–8 each side", focus: "Core", cue: "Move slowly and stay comfortable." },
-            { name: "Bird Dog", target: "2 × 6–8 each side", focus: "Core + back", cue: "Reach without twisting." },
-            { name: "Cat-Cow", target: "2 × 6–8 slow reps", focus: "Spine", cue: "Keep the motion gentle." },
-          ],
-        },
-        {
-          title: "Upper Mobility Flow",
+          title: "Upper Mobility",
           focus: "Shoulders, upper back, and core",
           emoji: "✨",
           exercises: [
             { name: "Shoulder Wall Slides", target: "2 × 8–10", focus: "Shoulders", cue: "Use a comfortable range." },
-            { name: "Cat-Cow", target: "2 × 6–8 slow reps", focus: "Spine", cue: "Move slowly." },
+            { name: "Cat-Cow", target: "2 × 6–8 slow reps", focus: "Spine", cue: "Move gently." },
             { name: "Bird Dog", target: "2 × 6–8 each side", focus: "Back + core", cue: "Keep your torso steady." },
             { name: "Dead Bug", target: "2 × 6–8 each side", focus: "Core", cue: "Stay controlled." },
-            { name: "Glute Bridge", target: "2 × 10–12", focus: "Hips", cue: "Use a smooth range." },
           ],
         },
-      ];
-    } else if (
-      equipment.includes("Dumbbells") ||
-      equipment.includes("Kettlebell")
-    ) {
-      templates = [
         {
-          title: "Full Body A",
-          focus: "Squat, push, pull, core",
-          emoji: "🏋️",
+          title: "Hips & Legs Mobility",
+          focus: "Hips, legs, and ankles",
+          emoji: "🌿",
           exercises: [
-            { name: "Goblet Squat", target: "3 × 8–12", focus: "Legs", cue: "Use a manageable weight and controlled reps." },
-            { name: "One-Arm Row", target: "3 × 8–12 each side", focus: "Back", cue: "Keep your torso steady." },
-            { name: "Floor Press", target: "3 × 8–12", focus: "Chest", cue: "Control every rep." },
-            { name: "Glute Bridges", target: "2 × 10–15", focus: "Hips", cue: "Pause briefly at the top." },
-            { name: "Dead Bug", target: "2 × 8 each side", focus: "Core", cue: "Move slowly." },
-            { name: "Calf Raises", target: "2 × 12–15", focus: "Calves", cue: "Use support for balance." },
+            { name: "Bodyweight Squat Hold", target: "2 × 20–30 sec", focus: "Hips + ankles", cue: "Use support if needed." },
+            { name: "Glute Bridges", target: "2 × 10–12", focus: "Hips", cue: "Use a smooth range." },
+            { name: "Reverse Lunges", target: "2 × 6 each side", focus: "Hips + legs", cue: "Use support if needed." },
+            { name: "Calf Raises", target: "2 × 10–15", focus: "Calves", cue: "Use support for balance." },
           ],
         },
         {
-          title: "Full Body B",
-          focus: "Hinge, shoulders, legs, core",
-          emoji: "⚡",
-          exercises: [
-            { name: "Romanian Deadlift", target: "2–3 × 8–12", focus: "Hamstrings", cue: "Keep the weight close and use a comfortable range." },
-            { name: "Standing Shoulder Press", target: "2 × 8–10", focus: "Shoulders", cue: "Avoid leaning back." },
-            { name: "Reverse Lunges", target: "2 × 8 each side", focus: "Legs", cue: "Use support if needed." },
-            { name: "One-Arm Row", target: "2 × 8–12 each side", focus: "Back", cue: "Keep the movement smooth." },
-            { name: "Bird Dog", target: "2 × 8 each side", focus: "Core + back", cue: "Do not twist." },
-            { name: "Glute Bridges", target: "2 × 10–15", focus: "Hips", cue: "Move smoothly." },
-          ],
+          title: "Core & Stability",
+          focus: "Core, balance, and control",
+          emoji: "🧩",
+          exercises: coreMobility,
         },
         {
-          title: "Balanced Strength Day",
-          focus: "Full-body technique",
-          emoji: "💪",
-          exercises: [
-            { name: "Goblet Squat", target: "2–3 × 8–12", focus: "Legs", cue: "Choose a weight you can control." },
-            { name: "Floor Press", target: "2–3 × 8–12", focus: "Chest", cue: "Keep each rep smooth." },
-            { name: "One-Arm Row", target: "2–3 × 8–12 each side", focus: "Back", cue: "Keep your torso steady." },
-            { name: "Romanian Deadlift", target: "2 × 8–12", focus: "Hamstrings", cue: "Use a comfortable range." },
-            { name: "Dead Bug", target: "2 × 8 each side", focus: "Core", cue: "Slow and controlled." },
-          ],
-        },
-      ];
-    } else if (workoutPlace === "gym") {
-      templates = [
-        {
-          title: "Gym Full Body A",
-          focus: "Legs, chest, back, core",
-          emoji: "🏋️",
-          exercises: [
-            { name: "Leg Press", target: "3 × 8–12", focus: "Legs", cue: "Use a comfortable range and controlled reps." },
-            { name: "Chest Press Machine", target: "3 × 8–12", focus: "Chest", cue: "Set the seat comfortably." },
-            { name: "Lat Pulldown", target: "3 × 8–12", focus: "Back", cue: "Pull smoothly without swinging." },
-            { name: "Seated Leg Curl", target: "2 × 10–12", focus: "Hamstrings", cue: "Keep the movement controlled." },
-            { name: "Dead Bug", target: "2 × 8 each side", focus: "Core", cue: "Move slowly." },
-            { name: "Calf Raises", target: "2 × 12–15", focus: "Calves", cue: "Use support if needed." },
-          ],
-        },
-        {
-          title: "Gym Full Body B",
-          focus: "Back, shoulders, legs, core",
-          emoji: "⚙️",
-          exercises: [
-            { name: "Cable Row", target: "3 × 8–12", focus: "Back", cue: "Sit tall and avoid jerking the weight." },
-            { name: "Machine Shoulder Press", target: "2 × 8–10", focus: "Shoulders", cue: "Use a load you can control." },
-            { name: "Leg Press", target: "2–3 × 10–12", focus: "Legs", cue: "Keep the movement smooth." },
-            { name: "Chest Press Machine", target: "2 × 8–12", focus: "Chest", cue: "Use a comfortable range." },
-            { name: "Bird Dog", target: "2 × 8 each side", focus: "Core + back", cue: "Move slowly." },
-          ],
-        },
-        {
-          title: "Gym Technique Day",
-          focus: "Balanced full-body practice",
-          emoji: "🎯",
-          exercises: [
-            { name: "Lat Pulldown", target: "2 × 8–12", focus: "Back", cue: "Pull smoothly." },
-            { name: "Leg Press", target: "2 × 8–12", focus: "Legs", cue: "Use a comfortable range." },
-            { name: "Chest Press Machine", target: "2 × 8–12", focus: "Chest", cue: "Control each rep." },
-            { name: "Machine Shoulder Press", target: "2 × 8–10", focus: "Shoulders", cue: "Do not force the range." },
-            { name: "Dead Bug", target: "2 × 8 each side", focus: "Core", cue: "Keep it controlled." },
-          ],
-        },
-      ];
-    } else if (equipment.includes("Push-Up Board")) {
-      templates = [
-        {
-          title: "Board Full Body A",
-          focus: "Chest, legs, core",
-          emoji: "🟩",
-          exercises: [
-            { name: "Push-Up Board Chest Press", target: "3 × 8–12", focus: "Chest", cue: "Use a comfortable handle position." },
-            { name: "Bodyweight Squats", target: "3 × 10–15", focus: "Legs", cue: "Use a comfortable depth." },
-            { name: "Glute Bridges", target: "2 × 10–15", focus: "Hips", cue: "Pause briefly at the top." },
-            { name: "Dead Bug", target: "2 × 8 each side", focus: "Core", cue: "Move slowly." },
-            { name: "Calf Raises", target: "2 × 12–15", focus: "Calves", cue: "Use support for balance." },
-          ],
-        },
-        {
-          title: "Board Full Body B",
-          focus: "Arms, legs, balance, core",
-          emoji: "💪",
-          exercises: [
-            { name: "Push-Up Board Triceps", target: "2–3 × 8–12", focus: "Arms", cue: "Keep your body controlled." },
-            { name: "Reverse Lunges", target: "2 × 8 each side", focus: "Legs", cue: "Use support if needed." },
-            { name: "Push-Up Board Chest Press", target: "2 × 8–12", focus: "Chest", cue: "Use a comfortable board setup." },
-            { name: "Bird Dog", target: "2 × 8 each side", focus: "Core + back", cue: "Move slowly without twisting." },
-            { name: "Glute Bridges", target: "2 × 10–15", focus: "Hips", cue: "Move smoothly." },
-          ],
-        },
-        {
-          title: "Board Technique Day",
-          focus: "Full-body control",
-          emoji: "🎯",
-          exercises: workoutExercises,
+          title: "Mobility Reset",
+          focus: "Gentle full-body movement",
+          emoji: "🧘",
+          exercises: mobilityReset,
         },
       ];
     } else {
-      templates = [
-        {
-          title: "Bodyweight Full Body A",
-          focus: "Squat, push, hips, core",
-          emoji: "🏠",
-          exercises: [
-            { name: "Bodyweight Squats", target: "3 × 10–15", focus: "Legs", cue: "Use a comfortable depth." },
-            { name: "Push-Ups", target: "2–3 × 6–12", focus: "Chest + arms", cue: "Choose a version that feels manageable." },
-            { name: "Glute Bridges", target: "3 × 10–15", focus: "Hips", cue: "Pause briefly at the top." },
-            { name: "Bird Dog", target: "2 × 8 each side", focus: "Core + back", cue: "Move slowly." },
-            { name: "Calf Raises", target: "2 × 12–15", focus: "Calves", cue: "Use support for balance." },
-          ],
-        },
-        {
-          title: "Bodyweight Full Body B",
-          focus: "Legs, balance, push, core",
-          emoji: "⚡",
-          exercises: [
-            { name: "Reverse Lunges", target: "2 × 8 each side", focus: "Legs", cue: "Use support if needed." },
-            { name: "Push-Ups", target: "2 × 6–12", focus: "Chest + arms", cue: "Use an easier variation if needed." },
-            { name: "Glute Bridges", target: "2 × 10–15", focus: "Hips", cue: "Move smoothly." },
-            { name: "Dead Bug", target: "2 × 8 each side", focus: "Core", cue: "Keep the movement controlled." },
-            { name: "Bodyweight Squats", target: "2 × 10–15", focus: "Legs", cue: "Keep the reps steady." },
-          ],
-        },
-        {
-          title: "Bodyweight Technique Day",
-          focus: "Full-body control",
-          emoji: "🎯",
-          exercises: workoutExercises,
-        },
-      ];
+      const count = trainingDays ?? 3;
+
+      if (count === 2) {
+        focusTemplates = [
+          {
+            title: "Upper Body",
+            focus: "Chest, back, shoulders, and arms",
+            emoji: "💪",
+            exercises: [...chestShoulders.slice(0, 2), ...backArms.slice(0, 2)],
+          },
+          {
+            title: "Lower Body & Core",
+            focus: "Legs, hips, and core",
+            emoji: "🦵",
+            exercises: [...legsHips.slice(0, 4), ...coreMobility.slice(0, 2)],
+          },
+        ];
+      } else {
+        focusTemplates = [
+          {
+            title: "Chest & Shoulders",
+            focus: "Chest, shoulders, and controlled pressing",
+            emoji: "💪",
+            exercises: chestShoulders,
+          },
+          {
+            title: "Core & Mobility",
+            focus: "Core control and comfortable mobility",
+            emoji: "🧩",
+            exercises: coreMobility,
+          },
+          {
+            title: "Legs & Hips",
+            focus: "Legs, hips, balance, and control",
+            emoji: "🦵",
+            exercises: legsHips,
+          },
+          {
+            title: "Back & Arms",
+            focus: "Back, arms, shoulders, and posture",
+            emoji: "↔️",
+            exercises: backArms,
+          },
+          {
+            title: "Balanced Technique",
+            focus: "Full-body movement practice",
+            emoji: "🎯",
+            exercises: balancedTechnique,
+          },
+          {
+            title: "Mobility Reset",
+            focus: "Gentle full-body mobility and recovery",
+            emoji: "🧘",
+            exercises: mobilityReset,
+          },
+        ];
+      }
     }
 
     const count = trainingDays ?? 3;
 
     return Array.from({ length: count }, (_, index) => {
-      const template = templates[index % templates.length];
+      const template = focusTemplates[index % focusTemplates.length];
 
       return {
         id: `session-${index + 1}`,
@@ -1699,7 +1739,6 @@ export default function App() {
     workoutLength,
     trainingDays,
     workoutDays,
-    workoutExercises,
   ]);
 
   const todayWeekday = getTodayWeekday();
@@ -4381,6 +4420,37 @@ export default function App() {
             <View style={styles.exerciseGuidePlanBadge}>
               <Text style={styles.exerciseGuidePlanBadgeText}>
                 ✓ THIS EXERCISE IS IN YOUR CURRENT PLAN
+              </Text>
+            </View>
+          )}
+
+          <Text style={styles.exerciseGuideSectionTitle}>Animated demo</Text>
+
+          {EXERCISE_DEMOS[selectedLibraryExercise.name] ? (
+            <View style={styles.exerciseDemoCard}>
+              <Image
+                source={{
+                  uri: EXERCISE_DEMOS[selectedLibraryExercise.name].uri,
+                }}
+                style={styles.exerciseDemoImage}
+                resizeMode="contain"
+              />
+              <Text style={styles.exerciseDemoCaption}>
+                Short looping movement demo
+              </Text>
+              <Text style={styles.exerciseDemoCredit}>
+                {EXERCISE_DEMOS[selectedLibraryExercise.name].credit}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.exerciseDemoPlaceholder}>
+              <Text style={styles.exerciseDemoPlaceholderIcon}>▶</Text>
+              <Text style={styles.exerciseDemoPlaceholderTitle}>
+                Demo clip coming next
+              </Text>
+              <Text style={styles.exerciseDemoPlaceholderText}>
+                We are adding short movement demos exercise by exercise. Use the
+                form cue below until this one has a clip.
               </Text>
             </View>
           )}
@@ -7739,6 +7809,74 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 0.5,
     textAlign: "center",
+  },
+
+  exerciseDemoCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    padding: 12,
+    overflow: "hidden",
+  },
+
+  exerciseDemoImage: {
+    width: "100%",
+    height: 220,
+    borderRadius: 15,
+    backgroundColor: "#0B0B0B",
+  },
+
+  exerciseDemoCaption: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "900",
+    marginTop: 10,
+  },
+
+  exerciseDemoCredit: {
+    color: COLORS.muted,
+    fontSize: 9,
+    lineHeight: 14,
+    marginTop: 4,
+  },
+
+  exerciseDemoPlaceholder: {
+    minHeight: 180,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 22,
+  },
+
+  exerciseDemoPlaceholderIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: COLORS.green,
+    color: COLORS.background,
+    textAlign: "center",
+    lineHeight: 52,
+    fontSize: 20,
+    fontWeight: "900",
+  },
+
+  exerciseDemoPlaceholderTitle: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "900",
+    marginTop: 12,
+  },
+
+  exerciseDemoPlaceholderText: {
+    color: COLORS.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "center",
+    marginTop: 5,
   },
 
   exerciseGuideInfoCard: {
