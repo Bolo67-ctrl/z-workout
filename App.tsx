@@ -112,6 +112,7 @@ type PersistedAppData = {
   mealCategory: MealCategory;
   mealTiming: MealTiming;
   recommendedMealsOnly: boolean;
+  favoriteExercises: string[];
 };
 
 const STORAGE_KEY = "z-workout-app-state-v1";
@@ -314,6 +315,78 @@ const EXERCISE_LIBRARY: ExerciseLibraryItem[] = [
     focus: "Chest and arms",
     equipment: "Chest press machine",
     cue: "Adjust the seat so the handles feel comfortable and press smoothly.",
+    easierOption: "Reduce the weight and use a comfortable range.",
+  },
+  {
+    name: "Floor Press",
+    emoji: "🏋️",
+    category: "Upper Body",
+    focus: "Chest and arms",
+    equipment: "Dumbbells",
+    cue: "Keep the movement smooth and use a weight you can control through the full rep.",
+    easierOption: "Use lighter dumbbells or practice one side at a time.",
+  },
+  {
+    name: "Romanian Deadlift",
+    emoji: "↘️",
+    category: "Lower Body",
+    focus: "Hamstrings and hips",
+    equipment: "Dumbbells or kettlebell",
+    cue: "Keep the weight close and use a comfortable hip-hinge range.",
+    easierOption: "Use a lighter weight or practice the hinge without weight.",
+  },
+  {
+    name: "Calf Raises",
+    emoji: "⬆️",
+    category: "Lower Body",
+    focus: "Calves and ankle control",
+    equipment: "No equipment",
+    cue: "Rise and lower under control and use support for balance if needed.",
+    easierOption: "Hold a wall or chair and use a smaller range.",
+  },
+  {
+    name: "Push-Up Board Triceps",
+    emoji: "🟩",
+    category: "Upper Body",
+    focus: "Triceps, chest, shoulders",
+    equipment: "Push-Up Board",
+    cue: "Use a board position that feels comfortable on your shoulders and wrists.",
+    easierOption: "Use an incline or knees-down setup.",
+  },
+  {
+    name: "Bodyweight Squat Hold",
+    emoji: "🦵",
+    category: "Mobility",
+    focus: "Hips, legs, ankles",
+    equipment: "No equipment",
+    cue: "Hold a comfortable position and use support when needed.",
+    easierOption: "Hold a higher position or use a chair for support.",
+  },
+  {
+    name: "Cable Row",
+    emoji: "↔️",
+    category: "Gym",
+    focus: "Back and arms",
+    equipment: "Cable machine",
+    cue: "Sit tall and pull smoothly without jerking the handle.",
+    easierOption: "Reduce the weight and shorten the range slightly.",
+  },
+  {
+    name: "Machine Shoulder Press",
+    emoji: "⬆️",
+    category: "Gym",
+    focus: "Shoulders and arms",
+    equipment: "Shoulder press machine",
+    cue: "Adjust the seat comfortably and press without forcing the range.",
+    easierOption: "Reduce the weight and use a smaller comfortable range.",
+  },
+  {
+    name: "Seated Leg Curl",
+    emoji: "🦵",
+    category: "Gym",
+    focus: "Hamstrings",
+    equipment: "Leg curl machine",
+    cue: "Adjust the machine comfortably and keep the movement controlled.",
     easierOption: "Reduce the weight and use a comfortable range.",
   },
 ];
@@ -843,6 +916,10 @@ export default function App() {
   const [exerciseCategory, setExerciseCategory] = useState<ExerciseCategory>("All");
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [expandedExercise, setExpandedExercise] = useState<string | null>(null);
+  const [favoriteExercises, setFavoriteExercises] = useState<string[]>([]);
+  const [showFavoriteExercises, setShowFavoriteExercises] = useState(false);
+  const [selectedLibraryExercise, setSelectedLibraryExercise] =
+    useState<ExerciseLibraryItem | null>(null);
   const [coachTime, setCoachTime] = useState("30 min");
   const [coachEnergy, setCoachEnergy] = useState<CoachEnergy>("Ready");
   const [coachEquipmentMode, setCoachEquipmentMode] =
@@ -883,6 +960,7 @@ export default function App() {
     mealCategory,
     mealTiming,
     recommendedMealsOnly,
+    favoriteExercises,
   });
 
   const applyPersistedData = (parsed: Partial<PersistedAppData>) => {
@@ -950,6 +1028,14 @@ export default function App() {
 
     if (typeof parsed.recommendedMealsOnly === "boolean") {
       setRecommendedMealsOnly(parsed.recommendedMealsOnly);
+    }
+
+    if (Array.isArray(parsed.favoriteExercises)) {
+      setFavoriteExercises(
+        parsed.favoriteExercises.filter(
+          (item): item is string => typeof item === "string"
+        )
+      );
     }
 
     if (parsed.weekKey === getCurrentWeekKey()) {
@@ -1040,6 +1126,7 @@ export default function App() {
     mealCategory,
     mealTiming,
     recommendedMealsOnly,
+    favoriteExercises,
   ]);
 
   useEffect(() => {
@@ -1167,6 +1254,7 @@ export default function App() {
     mealCategory,
     mealTiming,
     recommendedMealsOnly,
+    favoriteExercises,
   ]);
 
   const submitAuth = async () => {
@@ -2210,6 +2298,19 @@ export default function App() {
     ...progressWeeks.map((week) => week.count)
   );
 
+  const toggleFavoriteExercise = (name: string) => {
+    setFavoriteExercises((current) =>
+      current.includes(name)
+        ? current.filter((item) => item !== name)
+        : [...current, name]
+    );
+  };
+
+  const openExerciseGuide = (exercise: ExerciseLibraryItem) => {
+    setSelectedLibraryExercise(exercise);
+    setStep(16);
+  };
+
   const filteredExercises = useMemo(() => {
     const query = exerciseSearch.trim().toLowerCase();
 
@@ -2223,9 +2324,17 @@ export default function App() {
         exercise.focus.toLowerCase().includes(query) ||
         exercise.equipment.toLowerCase().includes(query);
 
-      return categoryMatch && searchMatch;
+      const favoriteMatch =
+        !showFavoriteExercises || favoriteExercises.includes(exercise.name);
+
+      return categoryMatch && searchMatch && favoriteMatch;
     });
-  }, [exerciseCategory, exerciseSearch]);
+  }, [
+    exerciseCategory,
+    exerciseSearch,
+    showFavoriteExercises,
+    favoriteExercises,
+  ]);
 
   const mealGoalLabel =
     goal === "muscle"
@@ -4020,6 +4129,42 @@ export default function App() {
             the actual sets, reps, and recovery when it builds a session.
           </Text>
 
+          <View style={styles.libraryModeRow}>
+            <TouchableOpacity
+              style={[
+                styles.libraryModeButton,
+                !showFavoriteExercises && styles.libraryModeButtonActive,
+              ]}
+              onPress={() => setShowFavoriteExercises(false)}
+            >
+              <Text
+                style={[
+                  styles.libraryModeText,
+                  !showFavoriteExercises && styles.libraryModeTextActive,
+                ]}
+              >
+                ALL EXERCISES
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.libraryModeButton,
+                showFavoriteExercises && styles.libraryModeButtonActive,
+              ]}
+              onPress={() => setShowFavoriteExercises(true)}
+            >
+              <Text
+                style={[
+                  styles.libraryModeText,
+                  showFavoriteExercises && styles.libraryModeTextActive,
+                ]}
+              >
+                SAVED ({favoriteExercises.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <TextInput
             value={exerciseSearch}
             onChangeText={setExerciseSearch}
@@ -4105,6 +4250,21 @@ export default function App() {
                       </Text>
                     </View>
 
+                    <TouchableOpacity
+                      style={styles.librarySaveButton}
+                      onPress={() => toggleFavoriteExercise(exercise.name)}
+                    >
+                      <Text
+                        style={[
+                          styles.librarySaveIcon,
+                          favoriteExercises.includes(exercise.name) &&
+                            styles.librarySaveIconActive,
+                        ]}
+                      >
+                        {favoriteExercises.includes(exercise.name) ? "★" : "☆"}
+                      </Text>
+                    </TouchableOpacity>
+
                     <Text style={styles.libraryExpandIcon}>
                       {expanded ? "−" : "+"}
                     </Text>
@@ -4131,6 +4291,15 @@ export default function App() {
                           the exercise causes pain.
                         </Text>
                       </View>
+
+                      <TouchableOpacity
+                        style={styles.libraryGuideButton}
+                        onPress={() => openExerciseGuide(exercise)}
+                      >
+                        <Text style={styles.libraryGuideButtonText}>
+                          OPEN EXERCISE GUIDE
+                        </Text>
+                      </TouchableOpacity>
                     </View>
                   )}
                 </TouchableOpacity>
@@ -4145,6 +4314,132 @@ export default function App() {
               not have to build the session manually.
             </Text>
           </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+
+  if (step === 16 && selectedLibraryExercise) {
+    const saved = favoriteExercises.includes(selectedLibraryExercise.name);
+    const appearsInPlan = weeklySessions.some((session) =>
+      session.exercises.some(
+        (exercise) => exercise.name === selectedLibraryExercise.name
+      )
+    );
+
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+
+        <ScrollView
+          contentContainerStyle={styles.exerciseGuideScreen}
+          showsVerticalScrollIndicator={false}
+        >
+          <TouchableOpacity onPress={() => setStep(9)}>
+            <Text style={styles.workoutBack}>‹ Back to exercises</Text>
+          </TouchableOpacity>
+
+          <View style={styles.exerciseGuideHero}>
+            <View style={styles.exerciseGuideEmojiBox}>
+              <Text style={styles.exerciseGuideEmoji}>
+                {selectedLibraryExercise.emoji}
+              </Text>
+            </View>
+
+            <View style={styles.exerciseGuideHeroText}>
+              <Text style={styles.exerciseGuideCategory}>
+                {selectedLibraryExercise.category}
+              </Text>
+              <Text style={styles.exerciseGuideTitle}>
+                {selectedLibraryExercise.name}
+              </Text>
+              <Text style={styles.exerciseGuideEquipment}>
+                {selectedLibraryExercise.equipment}
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.exerciseGuideSaveButton,
+              saved && styles.exerciseGuideSaveButtonActive,
+            ]}
+            onPress={() => toggleFavoriteExercise(selectedLibraryExercise.name)}
+          >
+            <Text
+              style={[
+                styles.exerciseGuideSaveText,
+                saved && styles.exerciseGuideSaveTextActive,
+              ]}
+            >
+              {saved ? "★ SAVED" : "☆ SAVE EXERCISE"}
+            </Text>
+          </TouchableOpacity>
+
+          {appearsInPlan && (
+            <View style={styles.exerciseGuidePlanBadge}>
+              <Text style={styles.exerciseGuidePlanBadgeText}>
+                ✓ THIS EXERCISE IS IN YOUR CURRENT PLAN
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.exerciseGuideInfoCard}>
+            <Text style={styles.exerciseGuideInfoLabel}>FOCUS</Text>
+            <Text style={styles.exerciseGuideInfoTitle}>
+              {selectedLibraryExercise.focus}
+            </Text>
+          </View>
+
+          <Text style={styles.exerciseGuideSectionTitle}>How to approach it</Text>
+          <View style={styles.exerciseGuideStepCard}>
+            <Text style={styles.exerciseGuideStepNumber}>1</Text>
+            <View style={styles.exerciseGuideStepContent}>
+              <Text style={styles.exerciseGuideStepTitle}>Set up comfortably</Text>
+              <Text style={styles.exerciseGuideStepText}>
+                Make sure the equipment and starting position feel stable before
+                you begin.
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.exerciseGuideStepCard}>
+            <Text style={styles.exerciseGuideStepNumber}>2</Text>
+            <View style={styles.exerciseGuideStepContent}>
+              <Text style={styles.exerciseGuideStepTitle}>Use this form cue</Text>
+              <Text style={styles.exerciseGuideStepText}>
+                {selectedLibraryExercise.cue}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.exerciseGuideStepCard}>
+            <Text style={styles.exerciseGuideStepNumber}>3</Text>
+            <View style={styles.exerciseGuideStepContent}>
+              <Text style={styles.exerciseGuideStepTitle}>Make it easier</Text>
+              <Text style={styles.exerciseGuideStepText}>
+                {selectedLibraryExercise.easierOption}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.exerciseGuideSafetyCard}>
+            <Text style={styles.exerciseGuideSafetyTitle}>Comfort first</Text>
+            <Text style={styles.exerciseGuideSafetyText}>
+              Move with control, take breaks when you need them, and stop the
+              exercise if it causes pain. The goal is good movement, not rushing.
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.exerciseGuidePlanButton}
+            onPress={() => setStep(13)}
+          >
+            <Text style={styles.exerciseGuidePlanButtonText}>
+              VIEW MY WORKOUT PLAN
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
     );
@@ -7083,6 +7378,39 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 
+  libraryModeRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+
+  libraryModeButton: {
+    flex: 1,
+    minHeight: 43,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  libraryModeButtonActive: {
+    backgroundColor: COLORS.green,
+    borderColor: COLORS.green,
+  },
+
+  libraryModeText: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+
+  libraryModeTextActive: {
+    color: COLORS.background,
+  },
+
   librarySearch: {
     backgroundColor: COLORS.card,
     color: COLORS.white,
@@ -7180,11 +7508,26 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
+  librarySaveButton: {
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+  },
+
+  librarySaveIcon: {
+    color: COLORS.muted,
+    fontSize: 22,
+    fontWeight: "800",
+  },
+
+  librarySaveIconActive: {
+    color: COLORS.green,
+  },
+
   libraryExpandIcon: {
     color: COLORS.green,
     fontSize: 25,
     fontWeight: "700",
-    marginLeft: 10,
+    marginLeft: 6,
   },
 
   libraryFocusRow: {
@@ -7242,6 +7585,23 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
+  libraryGuideButton: {
+    minHeight: 45,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.green,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+  },
+
+  libraryGuideButtonText: {
+    color: COLORS.green,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
+
   libraryEmptyCard: {
     backgroundColor: COLORS.card,
     borderWidth: 1,
@@ -7279,6 +7639,214 @@ const styles = StyleSheet.create({
   libraryFooterText: {
     color: COLORS.muted,
     lineHeight: 20,
+  },
+
+  exerciseGuideScreen: {
+    padding: 22,
+    paddingTop: 34,
+    paddingBottom: 60,
+  },
+
+  exerciseGuideHero: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#10160C",
+    borderWidth: 1,
+    borderColor: "#2E4516",
+    borderRadius: 22,
+    padding: 18,
+    marginTop: 20,
+  },
+
+  exerciseGuideEmojiBox: {
+    width: 68,
+    height: 68,
+    borderRadius: 21,
+    backgroundColor: COLORS.cardSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
+
+  exerciseGuideEmoji: {
+    fontSize: 34,
+  },
+
+  exerciseGuideHeroText: {
+    flex: 1,
+  },
+
+  exerciseGuideCategory: {
+    color: COLORS.green,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
+  exerciseGuideTitle: {
+    color: COLORS.white,
+    fontSize: 24,
+    lineHeight: 29,
+    fontWeight: "900",
+    marginTop: 4,
+  },
+
+  exerciseGuideEquipment: {
+    color: COLORS.muted,
+    fontSize: 12,
+    marginTop: 5,
+  },
+
+  exerciseGuideSaveButton: {
+    minHeight: 47,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+  },
+
+  exerciseGuideSaveButtonActive: {
+    borderColor: "#365018",
+    backgroundColor: "#151D0D",
+  },
+
+  exerciseGuideSaveText: {
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
+
+  exerciseGuideSaveTextActive: {
+    color: COLORS.green,
+  },
+
+  exerciseGuidePlanBadge: {
+    borderRadius: 14,
+    backgroundColor: "#151D0D",
+    borderWidth: 1,
+    borderColor: "#365018",
+    padding: 12,
+    marginTop: 10,
+  },
+
+  exerciseGuidePlanBadgeText: {
+    color: COLORS.green,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+    textAlign: "center",
+  },
+
+  exerciseGuideInfoCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 19,
+    padding: 16,
+    marginTop: 18,
+  },
+
+  exerciseGuideInfoLabel: {
+    color: COLORS.green,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+
+  exerciseGuideInfoTitle: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "900",
+    marginTop: 5,
+  },
+
+  exerciseGuideSectionTitle: {
+    color: COLORS.white,
+    fontSize: 20,
+    fontWeight: "900",
+    marginTop: 24,
+    marginBottom: 12,
+  },
+
+  exerciseGuideStepCard: {
+    flexDirection: "row",
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 9,
+  },
+
+  exerciseGuideStepNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 11,
+    backgroundColor: COLORS.green,
+    color: COLORS.background,
+    textAlign: "center",
+    lineHeight: 32,
+    fontSize: 13,
+    fontWeight: "900",
+    marginRight: 11,
+  },
+
+  exerciseGuideStepContent: {
+    flex: 1,
+  },
+
+  exerciseGuideStepTitle: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: "900",
+  },
+
+  exerciseGuideStepText: {
+    color: COLORS.muted,
+    lineHeight: 19,
+    fontSize: 12,
+    marginTop: 4,
+  },
+
+  exerciseGuideSafetyCard: {
+    backgroundColor: "#10160C",
+    borderWidth: 1,
+    borderColor: "#2E4516",
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 7,
+  },
+
+  exerciseGuideSafetyTitle: {
+    color: COLORS.green,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+
+  exerciseGuideSafetyText: {
+    color: COLORS.muted,
+    lineHeight: 20,
+    marginTop: 5,
+  },
+
+  exerciseGuidePlanButton: {
+    minHeight: 54,
+    borderRadius: 17,
+    backgroundColor: COLORS.green,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 14,
+  },
+
+  exerciseGuidePlanButtonText: {
+    color: COLORS.background,
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 0.7,
   },
 
   coachScreen: {
