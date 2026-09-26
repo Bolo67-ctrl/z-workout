@@ -17,6 +17,13 @@ type Goal =
   | "consistency"
   | "mobility";
 
+type WorkoutExercise = {
+  name: string;
+  target: string;
+  focus: string;
+  cue: string;
+};
+
 const COLORS = {
   background: "#080808",
   card: "#111111",
@@ -47,6 +54,8 @@ export default function App() {
   const [equipment, setEquipment] = useState<string[]>([]);
   const [trainingDays, setTrainingDays] = useState<number | null>(null);
   const [workoutLength, setWorkoutLength] = useState<string | null>(null);
+  const [completedExercises, setCompletedExercises] = useState<number[]>([]);
+  const [completedWorkouts, setCompletedWorkouts] = useState(0);
 
   const toggleEquipment = (item: string) => {
     if (item === "No Equipment") {
@@ -95,6 +104,103 @@ export default function App() {
 
     return `${locationText} • ${trainingDays ?? "-"} days/week • ${workoutLength ?? "-"} • ${equipmentText || "Equipment not set"}`;
   }, [workoutPlace, trainingDays, workoutLength, equipment]);
+
+  const workoutExercises = useMemo<WorkoutExercise[]>(() => {
+    let exercises: WorkoutExercise[];
+
+    if (goal === "mobility") {
+      exercises = [
+        { name: "Cat-Cow", target: "2 × 6–8 slow reps", focus: "Spine", cue: "Move slowly and stay comfortable." },
+        { name: "World's Greatest Stretch", target: "2 × 4 each side", focus: "Hips + upper back", cue: "Use a comfortable range of motion." },
+        { name: "Bodyweight Squat Hold", target: "2 × 20–30 sec", focus: "Hips + ankles", cue: "Hold onto support if needed." },
+        { name: "Shoulder Wall Slides", target: "2 × 8–10", focus: "Shoulders", cue: "Keep the movement controlled." },
+        { name: "Glute Bridge", target: "2 × 10–12", focus: "Hips", cue: "Pause briefly at the top." },
+        { name: "Dead Bug", target: "2 × 6–8 each side", focus: "Core", cue: "Keep your lower back comfortable." },
+      ];
+    } else if (equipment.includes("Push-Up Board")) {
+      exercises = [
+        { name: "Push-Up Board Chest Press", target: "3 × 8–12", focus: "Chest", cue: "Use a board position that feels natural on your shoulders." },
+        { name: "Push-Up Board Triceps", target: "2–3 × 8–12", focus: "Triceps", cue: "Keep your body in one straight line." },
+        { name: "Bodyweight Squats", target: "3 × 10–15", focus: "Legs", cue: "Use a comfortable depth and steady tempo." },
+        { name: "Reverse Lunges", target: "2 × 8 each side", focus: "Legs", cue: "Step back under control and use support if needed." },
+        { name: "Glute Bridges", target: "3 × 10–15", focus: "Glutes", cue: "Move smoothly and pause at the top." },
+        { name: "Dead Bug", target: "2 × 8 each side", focus: "Core", cue: "Slow reps; stop if your back feels uncomfortable." },
+        { name: "Calf Raises", target: "2 × 12–15", focus: "Calves", cue: "Use a wall or chair for balance." },
+      ];
+    } else if (equipment.includes("No Equipment")) {
+      exercises = [
+        { name: "Push-Ups", target: "2–3 × 6–12", focus: "Chest + arms", cue: "Use an incline or knees-down version if needed." },
+        { name: "Bodyweight Squats", target: "3 × 10–15", focus: "Legs", cue: "Keep the reps controlled." },
+        { name: "Reverse Lunges", target: "2 × 8 each side", focus: "Legs", cue: "Use support for balance if needed." },
+        { name: "Glute Bridges", target: "3 × 10–15", focus: "Glutes", cue: "Pause briefly at the top." },
+        { name: "Bird Dog", target: "2 × 6–8 each side", focus: "Core + back", cue: "Move slowly without twisting." },
+        { name: "Plank", target: "2 × 20–30 sec", focus: "Core", cue: "Finish the set early if your form starts to break down." },
+        { name: "Calf Raises", target: "2 × 12–15", focus: "Calves", cue: "Use support for balance." },
+      ];
+    } else if (
+      equipment.includes("Dumbbells") ||
+      equipment.includes("Kettlebell")
+    ) {
+      exercises = [
+        { name: "Goblet Squat", target: "3 × 8–12", focus: "Legs", cue: "Choose a manageable weight and move with control." },
+        { name: "One-Arm Row", target: "3 × 8–12 each side", focus: "Back", cue: "Keep your torso steady." },
+        { name: "Floor Press", target: "3 × 8–12", focus: "Chest", cue: "Use a weight you can control through every rep." },
+        { name: "Romanian Deadlift", target: "2–3 × 8–12", focus: "Hamstrings", cue: "Keep the weight close and use a comfortable range." },
+        { name: "Standing Shoulder Press", target: "2 × 8–10", focus: "Shoulders", cue: "Avoid leaning back to finish reps." },
+        { name: "Dead Bug", target: "2 × 8 each side", focus: "Core", cue: "Slow, controlled reps." },
+        { name: "Calf Raises", target: "2 × 12–15", focus: "Calves", cue: "Use support for balance." },
+      ];
+    } else if (workoutPlace === "gym") {
+      exercises = [
+        { name: "Leg Press", target: "3 × 8–12", focus: "Legs", cue: "Use a comfortable range and controlled reps." },
+        { name: "Chest Press Machine", target: "3 × 8–12", focus: "Chest", cue: "Set the seat so the handles feel comfortable." },
+        { name: "Lat Pulldown", target: "3 × 8–12", focus: "Back", cue: "Pull smoothly without swinging." },
+        { name: "Seated Leg Curl", target: "2 × 10–12", focus: "Hamstrings", cue: "Keep the movement controlled." },
+        { name: "Cable Row", target: "2 × 8–12", focus: "Back", cue: "Sit tall and avoid jerking the weight." },
+        { name: "Machine Shoulder Press", target: "2 × 8–10", focus: "Shoulders", cue: "Use a light-to-moderate load you can control." },
+        { name: "Easy Core Circuit", target: "2 rounds", focus: "Core", cue: "Keep it comfortable and stop if anything hurts." },
+      ];
+    } else {
+      exercises = [
+        { name: "Bodyweight Squats", target: "3 × 10–15", focus: "Legs", cue: "Use a comfortable depth." },
+        { name: "Push-Ups", target: "2–3 × 6–12", focus: "Chest + arms", cue: "Choose a version you can do with good form." },
+        { name: "Glute Bridges", target: "3 × 10–15", focus: "Glutes", cue: "Pause briefly at the top." },
+        { name: "Reverse Lunges", target: "2 × 8 each side", focus: "Legs", cue: "Use support if needed." },
+        { name: "Bird Dog", target: "2 × 8 each side", focus: "Core", cue: "Move slowly." },
+        { name: "Plank", target: "2 × 20–30 sec", focus: "Core", cue: "Stop before your form breaks down." },
+      ];
+    }
+
+    const maxExercises =
+      workoutLength === "15 min"
+        ? 4
+        : workoutLength === "30 min"
+        ? 5
+        : workoutLength === "45 min"
+        ? 6
+        : 7;
+
+    return exercises.slice(0, maxExercises);
+  }, [goal, equipment, workoutPlace, workoutLength]);
+
+  const toggleExerciseComplete = (index: number) => {
+    setCompletedExercises((current) =>
+      current.includes(index)
+        ? current.filter((item) => item !== index)
+        : [...current, index]
+    );
+  };
+
+  const finishWorkout = () => {
+    if (completedExercises.length > 0) {
+      setCompletedWorkouts((current) =>
+        Math.min(current + 1, trainingDays ?? current + 1)
+      );
+    }
+
+    setCompletedExercises([]);
+    setStep(5);
+  };
 
   if (step === 0) {
     return (
@@ -399,6 +505,92 @@ export default function App() {
     );
   }
 
+  if (step === 6) {
+    const completedCount = completedExercises.length;
+
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+
+        <ScrollView
+          contentContainerStyle={styles.workoutScreen}
+          showsVerticalScrollIndicator={false}
+        >
+          <TouchableOpacity onPress={() => setStep(5)}>
+            <Text style={styles.workoutBack}>‹ Back to plan</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.workoutScreenLabel}>TODAY'S SESSION</Text>
+          <Text style={styles.workoutScreenTitle}>{todayWorkout}</Text>
+
+          <Text style={styles.workoutScreenMeta}>
+            {workoutLength} • {workoutExercises.length} exercises • {completedCount} completed
+          </Text>
+
+          <View style={styles.safetyNote}>
+            <Text style={styles.safetyNoteTitle}>Train with control</Text>
+            <Text style={styles.safetyNoteText}>
+              Use a comfortable difficulty, take breaks when you need them, and stop an exercise if it causes pain.
+            </Text>
+          </View>
+
+          {workoutExercises.map((exercise, index) => {
+            const done = completedExercises.includes(index);
+
+            return (
+              <View
+                key={`${exercise.name}-${index}`}
+                style={[styles.exerciseCard, done && styles.exerciseCardDone]}
+              >
+                <View style={styles.exerciseHeader}>
+                  <View style={styles.exerciseNumber}>
+                    <Text style={styles.exerciseNumberText}>{index + 1}</Text>
+                  </View>
+
+                  <View style={styles.exerciseTitleWrap}>
+                    <Text style={styles.exerciseName}>{exercise.name}</Text>
+                    <Text style={styles.exerciseFocus}>{exercise.focus}</Text>
+                  </View>
+
+                  <Text style={styles.exerciseStatus}>{done ? "✓" : ""}</Text>
+                </View>
+
+                <Text style={styles.exerciseTarget}>{exercise.target}</Text>
+                <Text style={styles.exerciseCue}>{exercise.cue}</Text>
+
+                <TouchableOpacity
+                  style={[styles.completeSetButton, done && styles.undoButton]}
+                  onPress={() => toggleExerciseComplete(index)}
+                >
+                  <Text
+                    style={[
+                      styles.completeSetButtonText,
+                      done && styles.undoButtonText,
+                    ]}
+                  >
+                    {done ? "MARK INCOMPLETE" : "MARK COMPLETE"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+
+          <TouchableOpacity style={styles.finishWorkoutButton} onPress={finishWorkout}>
+            <Text style={styles.finishWorkoutButtonText}>
+              {completedCount === workoutExercises.length
+                ? "FINISH WORKOUT ✓"
+                : "FINISH FOR TODAY"}
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={styles.finishHint}>
+            It is okay to finish early. Recovery is part of training.
+          </Text>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
@@ -441,7 +633,13 @@ export default function App() {
             </Text>
           </View>
 
-          <TouchableOpacity style={styles.startButton}>
+          <TouchableOpacity
+            style={styles.startButton}
+            onPress={() => {
+              setCompletedExercises([]);
+              setStep(6);
+            }}
+          >
             <Text style={styles.startButtonText}>START WORKOUT</Text>
           </TouchableOpacity>
         </View>
@@ -450,7 +648,9 @@ export default function App() {
 
         <View style={styles.progressCard}>
           <View>
-            <Text style={styles.progressNumber}>0 / {trainingDays}</Text>
+            <Text style={styles.progressNumber}>
+              {completedWorkouts} / {trainingDays}
+            </Text>
             <Text style={styles.progressLabel}>Workouts completed</Text>
           </View>
 
@@ -461,7 +661,14 @@ export default function App() {
         </View>
 
         <View style={styles.progressBarBackground}>
-          <View style={[styles.progressBarFill, { width: "0%" }]} />
+          <View
+            style={[
+              styles.progressBarFill,
+              {
+                width: `${trainingDays ? (completedWorkouts / trainingDays) * 100 : 0}%`,
+              },
+            ]}
+          />
         </View>
 
         <Text style={styles.sectionTitle}>Explore</Text>
@@ -869,6 +1076,177 @@ const styles = StyleSheet.create({
 
   selectedTimeChoiceText: {
     color: COLORS.background,
+  },
+
+  workoutScreen: {
+    padding: 20,
+    paddingTop: 34,
+    paddingBottom: 60,
+  },
+
+  workoutBack: {
+    color: COLORS.green,
+    fontWeight: "800",
+    fontSize: 15,
+    marginBottom: 26,
+  },
+
+  workoutScreenLabel: {
+    color: COLORS.green,
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 1.4,
+  },
+
+  workoutScreenTitle: {
+    color: COLORS.white,
+    fontSize: 30,
+    lineHeight: 36,
+    fontWeight: "900",
+    marginTop: 7,
+  },
+
+  workoutScreenMeta: {
+    color: COLORS.muted,
+    fontSize: 14,
+    marginTop: 10,
+    marginBottom: 20,
+  },
+
+  safetyNote: {
+    backgroundColor: COLORS.cardSoft,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 20,
+  },
+
+  safetyNoteTitle: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: "900",
+    marginBottom: 5,
+  },
+
+  safetyNoteText: {
+    color: COLORS.muted,
+    lineHeight: 20,
+  },
+
+  exerciseCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 14,
+  },
+
+  exerciseCardDone: {
+    borderColor: COLORS.green,
+    backgroundColor: "#12180C",
+  },
+
+  exerciseHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  exerciseNumber: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: COLORS.cardSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+
+  exerciseNumberText: {
+    color: COLORS.green,
+    fontWeight: "900",
+  },
+
+  exerciseTitleWrap: {
+    flex: 1,
+  },
+
+  exerciseName: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+
+  exerciseFocus: {
+    color: COLORS.muted,
+    fontSize: 13,
+    marginTop: 2,
+  },
+
+  exerciseStatus: {
+    color: COLORS.green,
+    fontSize: 24,
+    fontWeight: "900",
+  },
+
+  exerciseTarget: {
+    color: COLORS.green,
+    fontSize: 16,
+    fontWeight: "900",
+    marginTop: 16,
+  },
+
+  exerciseCue: {
+    color: COLORS.muted,
+    lineHeight: 20,
+    marginTop: 7,
+  },
+
+  completeSetButton: {
+    backgroundColor: COLORS.green,
+    borderRadius: 14,
+    paddingVertical: 13,
+    alignItems: "center",
+    marginTop: 16,
+  },
+
+  completeSetButtonText: {
+    color: COLORS.background,
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 0.6,
+  },
+
+  undoButton: {
+    backgroundColor: COLORS.cardSoft,
+    borderWidth: 1,
+    borderColor: COLORS.green,
+  },
+
+  undoButtonText: {
+    color: COLORS.green,
+  },
+
+  finishWorkoutButton: {
+    backgroundColor: COLORS.white,
+    borderRadius: 17,
+    paddingVertical: 17,
+    alignItems: "center",
+    marginTop: 10,
+  },
+
+  finishWorkoutButtonText: {
+    color: COLORS.background,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
+
+  finishHint: {
+    color: COLORS.muted,
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 12,
   },
 
   dashboard: {
