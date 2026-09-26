@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   SafeAreaView,
   ScrollView,
@@ -64,6 +64,11 @@ export default function App() {
   const [completedWorkouts, setCompletedWorkouts] = useState(0);
   const [setLogs, setSetLogs] = useState<Record<string, SetLog>>({});
   const [previousSetLogs, setPreviousSetLogs] = useState<Record<string, SetLog>>({});
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [currentSetIndex, setCurrentSetIndex] = useState(0);
+  const [timerPhase, setTimerPhase] = useState<"work" | "rest">("work");
+  const [timeLeft, setTimeLeft] = useState(300);
+  const [timerRunning, setTimerRunning] = useState(false);
 
   const toggleEquipment = (item: string) => {
     if (item === "No Equipment") {
@@ -262,6 +267,149 @@ export default function App() {
         : [...current, key]
     );
   };
+
+  const getWorkWindow = (exercise: WorkoutExercise) => {
+    const target = exercise.target.toLowerCase();
+
+    if (target.includes("sec")) return 120;
+    if (target.includes("round")) return 180;
+
+    // This is a comfortable window, not a speed goal.
+    return 300;
+  };
+
+  const getRestSeconds = (exercise: WorkoutExercise) => {
+    if (goal === "mobility") return 30;
+    if (usesExternalWeight(exercise)) return 60;
+    if (goal === "strength") return 60;
+    if (goal === "muscle") return 45;
+
+    return 30;
+  };
+
+  const formatTimer = (seconds: number) => {
+    const safe = Math.max(0, seconds);
+    const minutes = Math.floor(safe / 60);
+    const remaining = safe % 60;
+
+    return `${minutes}:${remaining.toString().padStart(2, "0")}`;
+  };
+
+  const startTimedWorkout = () => {
+    const firstExercise = workoutExercises[0];
+
+    setCompletedSets([]);
+    setSetLogs({});
+    setCurrentExerciseIndex(0);
+    setCurrentSetIndex(0);
+    setTimerPhase("work");
+    setTimeLeft(firstExercise ? getWorkWindow(firstExercise) : 300);
+    setTimerRunning(true);
+    setStep(6);
+  };
+
+  const finishTimedWorkout = () => {
+    setCompletedWorkouts((current) =>
+      Math.min(current + 1, trainingDays ?? current + 1)
+    );
+    setCompletedSets([]);
+    setSetLogs({});
+    setTimerRunning(false);
+    setStep(5);
+  };
+
+  const moveToNextSet = () => {
+    const exercise = workoutExercises[currentExerciseIndex];
+
+    if (!exercise) {
+      finishTimedWorkout();
+      return;
+    }
+
+    const setCount = getSetCount(exercise.target);
+    const isLastSet = currentSetIndex >= setCount - 1;
+    const isLastExercise =
+      currentExerciseIndex >= workoutExercises.length - 1;
+
+    if (!isLastSet) {
+      const nextSetIndex = currentSetIndex + 1;
+      setCurrentSetIndex(nextSetIndex);
+      setTimerPhase("work");
+      setTimeLeft(getWorkWindow(exercise));
+      setTimerRunning(true);
+      return;
+    }
+
+    if (!isLastExercise) {
+      const nextExerciseIndex = currentExerciseIndex + 1;
+      const nextExercise = workoutExercises[nextExerciseIndex];
+
+      setCurrentExerciseIndex(nextExerciseIndex);
+      setCurrentSetIndex(0);
+      setTimerPhase("work");
+      setTimeLeft(getWorkWindow(nextExercise));
+      setTimerRunning(true);
+      return;
+    }
+
+    finishTimedWorkout();
+  };
+
+  const completeTimedSet = () => {
+    const exercise = workoutExercises[currentExerciseIndex];
+
+    if (!exercise) return;
+
+    const key = `${currentExerciseIndex}-${currentSetIndex}`;
+
+    setCompletedSets((current) =>
+      current.includes(key) ? current : [...current, key]
+    );
+
+    setTimerPhase("rest");
+    setTimeLeft(getRestSeconds(exercise));
+    setTimerRunning(true);
+  };
+
+  const skipRest = () => {
+    moveToNextSet();
+  };
+
+  useEffect(() => {
+    if (step !== 6 || !timerRunning) return;
+
+    if (timeLeft <= 0) {
+      setTimerRunning(false);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft((current) => {
+        if (current <= 1) {
+          clearInterval(timer);
+
+          if (timerPhase === "rest") {
+            setTimeout(() => moveToNextSet(), 0);
+          } else {
+            setTimerRunning(false);
+          }
+
+          return 0;
+        }
+
+        return current - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [
+    step,
+    timerRunning,
+    timeLeft,
+    timerPhase,
+    currentExerciseIndex,
+    currentSetIndex,
+  ]);
 
   const finishWorkout = () => {
     if (completedSets.length > 0) {
@@ -593,200 +741,167 @@ export default function App() {
   }
 
   if (step === 6) {
-    const completedExerciseCount = workoutExercises.filter((exercise, exerciseIndex) => {
-      const setCount = getSetCount(exercise.target);
+    const currentExercise = workoutExercises[currentExerciseIndex];
 
-      return Array.from({ length: setCount }).every((_, setIndex) =>
-        completedSets.includes(`${exerciseIndex}-${setIndex}`)
+    if (!currentExercise) {
+      return (
+        <SafeAreaView style={styles.container}>
+          <StatusBar style="light" />
+          <View style={styles.timerEmptyState}>
+            <Text style={styles.timerExerciseTitle}>No workout found</Text>
+            <TouchableOpacity style={styles.finishWorkoutButton} onPress={() => setStep(5)}>
+              <Text style={styles.finishWorkoutButtonText}>BACK TO PLAN</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
       );
-    }).length;
+    }
 
-    const totalSets = workoutExercises.reduce(
-      (sum, exercise) => sum + getSetCount(exercise.target),
-      0
-    );
+    const setCount = getSetCount(currentExercise.target);
+    const setTarget = getSetTarget(currentExercise.target);
+    const restSeconds = getRestSeconds(currentExercise);
+    const isWork = timerPhase === "work";
 
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar style="light" />
 
         <ScrollView
-          contentContainerStyle={styles.workoutScreen}
+          contentContainerStyle={styles.timerWorkoutScreen}
           showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity onPress={() => setStep(5)}>
-            <Text style={styles.workoutBack}>‹ Back to plan</Text>
-          </TouchableOpacity>
+          <View style={styles.timerTopBar}>
+            <TouchableOpacity
+              onPress={() => {
+                setTimerRunning(false);
+                setStep(5);
+              }}
+            >
+              <Text style={styles.workoutBack}>‹ End session</Text>
+            </TouchableOpacity>
 
-          <Text style={styles.workoutScreenLabel}>TODAY'S SESSION</Text>
-          <Text style={styles.workoutScreenTitle}>{todayWorkout}</Text>
-
-          <Text style={styles.workoutScreenMeta}>
-            {workoutLength} • {workoutExercises.length} exercises • {completedSets.length}/{totalSets} sets
-          </Text>
-
-          <View style={styles.safetyNote}>
-            <Text style={styles.safetyNoteTitle}>Train with control</Text>
-            <Text style={styles.safetyNoteText}>
-              Use a comfortable difficulty, take breaks when you need them, and stop an exercise if it causes pain.
+            <Text style={styles.timerProgressText}>
+              {currentExerciseIndex + 1}/{workoutExercises.length}
             </Text>
           </View>
 
-          {Object.keys(previousSetLogs).length > 0 && (
-            <View style={styles.previousWorkoutNote}>
-              <Text style={styles.previousWorkoutNoteTitle}>Previous workout saved</Text>
-              <Text style={styles.previousWorkoutNoteText}>
-                Your last logged numbers will appear under each matching set.
+          <Text style={styles.workoutScreenLabel}>
+            {isWork ? "WORK" : "RECOVERY"}
+          </Text>
+
+          <Text style={styles.timerExerciseTitle}>
+            {isWork ? currentExercise.name : "Take a short break"}
+          </Text>
+
+          <Text style={styles.timerSetLabel}>
+            {isWork
+              ? `Set ${currentSetIndex + 1} of ${setCount} • ${setTarget}`
+              : `${currentExercise.name} complete • next set coming up`}
+          </Text>
+
+          <View
+            style={[
+              styles.timerCircle,
+              !isWork && styles.timerCircleRest,
+            ]}
+          >
+            <Text style={styles.timerTime}>{formatTimer(timeLeft)}</Text>
+            <Text style={styles.timerCaption}>
+              {timeLeft === 0
+                ? isWork
+                  ? "Need more time?"
+                  : "Rest complete"
+                : isWork
+                ? "comfortable time window"
+                : "rest"}
+            </Text>
+          </View>
+
+          {isWork ? (
+            <>
+              <View style={styles.timerTargetCard}>
+                <Text style={styles.timerTargetLabel}>YOUR TARGET</Text>
+                <Text style={styles.timerTargetValue}>{setTarget}</Text>
+                <Text style={styles.timerTargetCue}>{currentExercise.cue}</Text>
+              </View>
+
+              <Text style={styles.timerSafetyText}>
+                The timer is not a race. Use good form, pause when you need to,
+                and stop if an exercise causes pain.
               </Text>
-            </View>
+
+              <TouchableOpacity
+                style={styles.timerPrimaryButton}
+                onPress={completeTimedSet}
+              >
+                <Text style={styles.timerPrimaryButtonText}>DONE • NEXT</Text>
+              </TouchableOpacity>
+
+              <View style={styles.timerSecondaryRow}>
+                <TouchableOpacity
+                  style={styles.timerSecondaryButton}
+                  onPress={() => setTimeLeft((current) => current + 30)}
+                >
+                  <Text style={styles.timerSecondaryButtonText}>+30 SEC</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.timerSecondaryButton}
+                  onPress={() => setTimerRunning((current) => !current)}
+                >
+                  <Text style={styles.timerSecondaryButtonText}>
+                    {timerRunning ? "PAUSE" : "RESUME"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={styles.restInfoCard}>
+                <Text style={styles.restInfoTitle}>
+                  {restSeconds} sec recovery
+                </Text>
+                <Text style={styles.restInfoText}>
+                  Breathe, get comfortable, and get ready for the next set.
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.timerPrimaryButton}
+                onPress={skipRest}
+              >
+                <Text style={styles.timerPrimaryButtonText}>START NEXT NOW</Text>
+              </TouchableOpacity>
+
+              <View style={styles.timerSecondaryRow}>
+                <TouchableOpacity
+                  style={styles.timerSecondaryButton}
+                  onPress={() => setTimeLeft((current) => current + 30)}
+                >
+                  <Text style={styles.timerSecondaryButtonText}>+30 SEC REST</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.timerSecondaryButton}
+                  onPress={() => setTimerRunning((current) => !current)}
+                >
+                  <Text style={styles.timerSecondaryButtonText}>
+                    {timerRunning ? "PAUSE" : "RESUME"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </>
           )}
 
-          {workoutExercises.map((exercise, exerciseIndex) => {
-            const setCount = getSetCount(exercise.target);
-            const setTarget = getSetTarget(exercise.target);
-            const done = Array.from({ length: setCount }).every((_, setIndex) =>
-              completedSets.includes(`${exerciseIndex}-${setIndex}`)
-            );
-
-            return (
-              <View
-                key={`${exercise.name}-${exerciseIndex}`}
-                style={[styles.exerciseCard, done && styles.exerciseCardDone]}
-              >
-                <View style={styles.exerciseHeader}>
-                  <View style={styles.exerciseNumber}>
-                    <Text style={styles.exerciseNumberText}>
-                      {exerciseIndex + 1}
-                    </Text>
-                  </View>
-
-                  <View style={styles.exerciseTitleWrap}>
-                    <Text style={styles.exerciseName}>{exercise.name}</Text>
-                    <Text style={styles.exerciseFocus}>{exercise.focus}</Text>
-                  </View>
-
-                  <Text style={styles.exerciseStatus}>{done ? "✓" : ""}</Text>
-                </View>
-
-                <Text style={styles.exerciseTarget}>{exercise.target}</Text>
-                <Text style={styles.exerciseCue}>{exercise.cue}</Text>
-
-                <View style={styles.setList}>
-                  {Array.from({ length: setCount }).map((_, setIndex) => {
-                    const key = `${exerciseIndex}-${setIndex}`;
-                    const setDone = completedSets.includes(key);
-                    const currentLog = setLogs[key] ?? { reps: "", weight: "" };
-                    const previousLog = previousSetLogs[key];
-                    const weighted = usesExternalWeight(exercise);
-                    const resultLabel = getResultLabel(setTarget);
-
-                    return (
-                      <View
-                        key={key}
-                        style={[styles.setRow, setDone && styles.setRowDone]}
-                      >
-                        <View style={styles.setTopRow}>
-                          <View style={styles.setInfo}>
-                            <Text
-                              style={[
-                                styles.setLabel,
-                                setDone && styles.setLabelDone,
-                              ]}
-                            >
-                              SET {setIndex + 1}
-                            </Text>
-                            <Text style={styles.setTarget}>{setTarget}</Text>
-                          </View>
-
-                          <TouchableOpacity
-                            style={[
-                              styles.setCheck,
-                              setDone && styles.setCheckDone,
-                            ]}
-                            onPress={() =>
-                              toggleSetComplete(exerciseIndex, setIndex)
-                            }
-                          >
-                            <Text
-                              style={[
-                                styles.setCheckText,
-                                setDone && styles.setCheckTextDone,
-                              ]}
-                            >
-                              {setDone ? "✓" : ""}
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
-
-                        {previousLog && (previousLog.reps || previousLog.weight) && (
-                          <Text style={styles.previousSetText}>
-                            Previous: {previousLog.weight ? `${previousLog.weight} weight • ` : ""}
-                            {previousLog.reps
-                              ? `${previousLog.reps} ${getResultLabel(setTarget).toLowerCase()}`
-                              : ""}
-                          </Text>
-                        )}
-
-                        <View style={styles.logInputRow}>
-                          {weighted && (
-                            <View style={styles.logInputWrap}>
-                              <Text style={styles.logInputLabel}>Weight</Text>
-                              <TextInput
-                                value={currentLog.weight}
-                                onChangeText={(value) =>
-                                  updateSetLog(
-                                    exerciseIndex,
-                                    setIndex,
-                                    "weight",
-                                    value.replace(/[^0-9.]/g, "")
-                                  )
-                                }
-                                placeholder="0"
-                                placeholderTextColor="#555555"
-                                keyboardType="decimal-pad"
-                                style={styles.logInput}
-                              />
-                            </View>
-                          )}
-
-                          <View style={styles.logInputWrap}>
-                            <Text style={styles.logInputLabel}>{resultLabel}</Text>
-                            <TextInput
-                              value={currentLog.reps}
-                              onChangeText={(value) =>
-                                updateSetLog(
-                                  exerciseIndex,
-                                  setIndex,
-                                  "reps",
-                                  value.replace(/[^0-9]/g, "")
-                                )
-                              }
-                              placeholder="0"
-                              placeholderTextColor="#555555"
-                              keyboardType="number-pad"
-                              style={styles.logInput}
-                            />
-                          </View>
-                        </View>
-                      </View>
-                    );
-                  })}
-                </View>
-              </View>
-            );
-          })}
-
-          <TouchableOpacity style={styles.finishWorkoutButton} onPress={finishWorkout}>
-            <Text style={styles.finishWorkoutButtonText}>
-              {completedExerciseCount === workoutExercises.length
-                ? "FINISH WORKOUT ✓"
-                : "FINISH FOR TODAY"}
+          <View style={styles.upNextCard}>
+            <Text style={styles.upNextLabel}>UP NEXT</Text>
+            <Text style={styles.upNextText}>
+              {currentSetIndex < setCount - 1
+                ? `${currentExercise.name} • Set ${currentSetIndex + 2}`
+                : workoutExercises[currentExerciseIndex + 1]?.name ??
+                  "Workout complete"}
             </Text>
-          </TouchableOpacity>
-
-          <Text style={styles.finishHint}>
-            It is okay to finish early. Recovery is part of training.
-          </Text>
+          </View>
         </ScrollView>
       </SafeAreaView>
     );
@@ -836,11 +951,7 @@ export default function App() {
 
           <TouchableOpacity
             style={styles.startButton}
-            onPress={() => {
-              setCompletedSets([]);
-              setSetLogs({});
-              setStep(6);
-            }}
+            onPress={startTimedWorkout}
           >
             <Text style={styles.startButtonText}>START WORKOUT</Text>
           </TouchableOpacity>
@@ -1278,6 +1389,193 @@ const styles = StyleSheet.create({
 
   selectedTimeChoiceText: {
     color: COLORS.background,
+  },
+
+  timerWorkoutScreen: {
+    padding: 22,
+    paddingTop: 34,
+    paddingBottom: 60,
+  },
+
+  timerTopBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 28,
+  },
+
+  timerProgressText: {
+    color: COLORS.muted,
+    fontWeight: "800",
+    fontSize: 13,
+  },
+
+  timerExerciseTitle: {
+    color: COLORS.white,
+    fontSize: 31,
+    lineHeight: 37,
+    fontWeight: "900",
+    marginTop: 7,
+  },
+
+  timerSetLabel: {
+    color: COLORS.muted,
+    fontSize: 15,
+    marginTop: 8,
+  },
+
+  timerCircle: {
+    width: 230,
+    height: 230,
+    borderRadius: 115,
+    borderWidth: 8,
+    borderColor: COLORS.green,
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 30,
+    backgroundColor: "#0D100A",
+  },
+
+  timerCircleRest: {
+    borderColor: "#FFFFFF",
+    backgroundColor: COLORS.card,
+  },
+
+  timerTime: {
+    color: COLORS.white,
+    fontSize: 52,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
+  timerCaption: {
+    color: COLORS.muted,
+    fontSize: 12,
+    marginTop: 7,
+    textAlign: "center",
+  },
+
+  timerTargetCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    padding: 18,
+  },
+
+  timerTargetLabel: {
+    color: COLORS.green,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.1,
+  },
+
+  timerTargetValue: {
+    color: COLORS.white,
+    fontSize: 26,
+    fontWeight: "900",
+    marginTop: 6,
+  },
+
+  timerTargetCue: {
+    color: COLORS.muted,
+    lineHeight: 20,
+    marginTop: 8,
+  },
+
+  timerSafetyText: {
+    color: COLORS.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "center",
+    marginTop: 15,
+  },
+
+  timerPrimaryButton: {
+    backgroundColor: COLORS.green,
+    borderRadius: 18,
+    paddingVertical: 18,
+    alignItems: "center",
+    marginTop: 22,
+  },
+
+  timerPrimaryButtonText: {
+    color: COLORS.background,
+    fontWeight: "900",
+    fontSize: 15,
+    letterSpacing: 0.8,
+  },
+
+  timerSecondaryRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 11,
+  },
+
+  timerSecondaryButton: {
+    flex: 1,
+    minHeight: 50,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
+
+  timerSecondaryButtonText: {
+    color: COLORS.white,
+    fontWeight: "800",
+    fontSize: 12,
+  },
+
+  restInfoCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    padding: 18,
+  },
+
+  restInfoTitle: {
+    color: COLORS.white,
+    fontSize: 20,
+    fontWeight: "900",
+  },
+
+  restInfoText: {
+    color: COLORS.muted,
+    lineHeight: 20,
+    marginTop: 6,
+  },
+
+  upNextCard: {
+    marginTop: 22,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingTop: 18,
+  },
+
+  upNextLabel: {
+    color: COLORS.muted,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
+  upNextText: {
+    color: COLORS.white,
+    fontSize: 17,
+    fontWeight: "800",
+    marginTop: 5,
+  },
+
+  timerEmptyState: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 24,
   },
 
   workoutScreen: {
