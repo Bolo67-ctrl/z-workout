@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase, supabaseConfigured } from "./lib/supabase";
 
 type Place = "home" | "gym";
 type Goal =
@@ -807,6 +808,109 @@ export default function App() {
   const [sessionTitle, setSessionTitle] = useState<string | null>(null);
   const [sessionLength, setSessionLength] = useState<string | null>(null);
   const [storageReady, setStorageReady] = useState(false);
+  const [sessionUserId, setSessionUserId] = useState<string | null>(null);
+  const [sessionEmail, setSessionEmail] = useState("");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authMessage, setAuthMessage] = useState("");
+  const [cloudReady, setCloudReady] = useState(false);
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<
+    "Local only" | "Connecting" | "Syncing" | "Synced" | "Error"
+  >("Local only");
+
+  const getPersistedSnapshot = (): PersistedAppData => ({
+    workoutPlace,
+    goal,
+    equipment,
+    trainingDays,
+    workoutLength,
+    completedWorkouts,
+    workoutHistory,
+    weekKey: getCurrentWeekKey(),
+    mealCategory,
+    mealTiming,
+    recommendedMealsOnly,
+  });
+
+  const applyPersistedData = (parsed: Partial<PersistedAppData>) => {
+    if (parsed.workoutPlace === "home" || parsed.workoutPlace === "gym") {
+      setWorkoutPlace(parsed.workoutPlace);
+    }
+
+    if (
+      parsed.goal === "muscle" ||
+      parsed.goal === "strength" ||
+      parsed.goal === "endurance" ||
+      parsed.goal === "consistency" ||
+      parsed.goal === "mobility"
+    ) {
+      setGoal(parsed.goal);
+    }
+
+    if (Array.isArray(parsed.equipment)) {
+      setEquipment(parsed.equipment);
+    }
+
+    if (typeof parsed.trainingDays === "number") {
+      setTrainingDays(parsed.trainingDays);
+    }
+
+    if (typeof parsed.workoutLength === "string") {
+      setWorkoutLength(parsed.workoutLength);
+    }
+
+    if (Array.isArray(parsed.workoutHistory)) {
+      setWorkoutHistory(parsed.workoutHistory);
+    }
+
+    if (
+      parsed.mealCategory === "All" ||
+      parsed.mealCategory === "Breakfast" ||
+      parsed.mealCategory === "Lunch" ||
+      parsed.mealCategory === "Dinner" ||
+      parsed.mealCategory === "Snack" ||
+      parsed.mealCategory === "Vegetarian" ||
+      parsed.mealCategory === "Quick"
+    ) {
+      setMealCategory(parsed.mealCategory);
+    }
+
+    if (
+      parsed.mealTiming === "Anytime" ||
+      parsed.mealTiming === "Before Workout" ||
+      parsed.mealTiming === "After Workout"
+    ) {
+      setMealTiming(parsed.mealTiming);
+    }
+
+    if (typeof parsed.recommendedMealsOnly === "boolean") {
+      setRecommendedMealsOnly(parsed.recommendedMealsOnly);
+    }
+
+    if (parsed.weekKey === getCurrentWeekKey()) {
+      setCompletedWorkouts(
+        typeof parsed.completedWorkouts === "number"
+          ? parsed.completedWorkouts
+          : 0
+      );
+    } else {
+      setCompletedWorkouts(0);
+    }
+
+    const hasSavedPlan =
+      (parsed.workoutPlace === "home" || parsed.workoutPlace === "gym") &&
+      !!parsed.goal &&
+      Array.isArray(parsed.equipment) &&
+      parsed.equipment.length > 0 &&
+      typeof parsed.trainingDays === "number" &&
+      typeof parsed.workoutLength === "string";
+
+    if (hasSavedPlan) {
+      setStep(5);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -820,82 +924,7 @@ export default function App() {
         }
 
         const parsed = JSON.parse(saved) as Partial<PersistedAppData>;
-
-        if (parsed.workoutPlace === "home" || parsed.workoutPlace === "gym") {
-          setWorkoutPlace(parsed.workoutPlace);
-        }
-
-        if (
-          parsed.goal === "muscle" ||
-          parsed.goal === "strength" ||
-          parsed.goal === "endurance" ||
-          parsed.goal === "consistency" ||
-          parsed.goal === "mobility"
-        ) {
-          setGoal(parsed.goal);
-        }
-
-        if (Array.isArray(parsed.equipment)) {
-          setEquipment(parsed.equipment);
-        }
-
-        if (typeof parsed.trainingDays === "number") {
-          setTrainingDays(parsed.trainingDays);
-        }
-
-        if (typeof parsed.workoutLength === "string") {
-          setWorkoutLength(parsed.workoutLength);
-        }
-
-        if (Array.isArray(parsed.workoutHistory)) {
-          setWorkoutHistory(parsed.workoutHistory);
-        }
-
-        if (
-          parsed.mealCategory === "All" ||
-          parsed.mealCategory === "Breakfast" ||
-          parsed.mealCategory === "Lunch" ||
-          parsed.mealCategory === "Dinner" ||
-          parsed.mealCategory === "Snack" ||
-          parsed.mealCategory === "Vegetarian" ||
-          parsed.mealCategory === "Quick"
-        ) {
-          setMealCategory(parsed.mealCategory);
-        }
-
-        if (
-          parsed.mealTiming === "Anytime" ||
-          parsed.mealTiming === "Before Workout" ||
-          parsed.mealTiming === "After Workout"
-        ) {
-          setMealTiming(parsed.mealTiming);
-        }
-
-        if (typeof parsed.recommendedMealsOnly === "boolean") {
-          setRecommendedMealsOnly(parsed.recommendedMealsOnly);
-        }
-
-        if (parsed.weekKey === getCurrentWeekKey()) {
-          setCompletedWorkouts(
-            typeof parsed.completedWorkouts === "number"
-              ? parsed.completedWorkouts
-              : 0
-          );
-        } else {
-          setCompletedWorkouts(0);
-        }
-
-        const hasSavedPlan =
-          (parsed.workoutPlace === "home" || parsed.workoutPlace === "gym") &&
-          !!parsed.goal &&
-          Array.isArray(parsed.equipment) &&
-          parsed.equipment.length > 0 &&
-          typeof parsed.trainingDays === "number" &&
-          typeof parsed.workoutLength === "string";
-
-        if (hasSavedPlan) {
-          setStep(5);
-        }
+        applyPersistedData(parsed);
       } catch {
         // If saved data is unavailable or invalid, the app starts fresh.
       } finally {
@@ -916,19 +945,7 @@ export default function App() {
     if (!storageReady) return;
 
     const saveApp = async () => {
-      const data: PersistedAppData = {
-        workoutPlace,
-        goal,
-        equipment,
-        trainingDays,
-        workoutLength,
-        completedWorkouts,
-        workoutHistory,
-        weekKey: getCurrentWeekKey(),
-        mealCategory,
-        mealTiming,
-        recommendedMealsOnly,
-      };
+      const data = getPersistedSnapshot();
 
       try {
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -951,6 +968,202 @@ export default function App() {
     mealTiming,
     recommendedMealsOnly,
   ]);
+
+  useEffect(() => {
+    if (!storageReady || !supabaseConfigured) {
+      setCloudSyncStatus("Local only");
+      return;
+    }
+
+    let mounted = true;
+
+    const applySession = (session: any) => {
+      if (!mounted) return;
+
+      const user = session?.user;
+
+      setSessionUserId(user?.id ?? null);
+      setSessionEmail(user?.email ?? "");
+      setCloudReady(false);
+      setCloudSyncStatus(user ? "Connecting" : "Local only");
+    };
+
+    supabase.auth.getSession().then(({ data }) => {
+      applySession(data.session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      applySession(session);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [storageReady]);
+
+  useEffect(() => {
+    if (!storageReady || !supabaseConfigured || !sessionUserId) return;
+
+    let cancelled = false;
+
+    const loadCloud = async () => {
+      setCloudSyncStatus("Connecting");
+
+      const { data, error } = await supabase
+        .from("user_app_state")
+        .select("data")
+        .eq("user_id", sessionUserId)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (error) {
+        setCloudSyncStatus("Error");
+        return;
+      }
+
+      if (data?.data) {
+        applyPersistedData(data.data as Partial<PersistedAppData>);
+      } else {
+        const { error: saveError } = await supabase
+          .from("user_app_state")
+          .upsert({
+            user_id: sessionUserId,
+            data: getPersistedSnapshot(),
+            updated_at: new Date().toISOString(),
+          });
+
+        if (saveError) {
+          setCloudSyncStatus("Error");
+          return;
+        }
+      }
+
+      if (!cancelled) {
+        setCloudReady(true);
+        setCloudSyncStatus("Synced");
+      }
+    };
+
+    loadCloud();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [storageReady, sessionUserId]);
+
+  useEffect(() => {
+    if (
+      !storageReady ||
+      !supabaseConfigured ||
+      !sessionUserId ||
+      !cloudReady
+    ) {
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setCloudSyncStatus("Syncing");
+
+      const { error } = await supabase.from("user_app_state").upsert({
+        user_id: sessionUserId,
+        data: getPersistedSnapshot(),
+        updated_at: new Date().toISOString(),
+      });
+
+      setCloudSyncStatus(error ? "Error" : "Synced");
+    }, 700);
+
+    return () => clearTimeout(timer);
+  }, [
+    storageReady,
+    sessionUserId,
+    cloudReady,
+    workoutPlace,
+    goal,
+    equipment,
+    trainingDays,
+    workoutLength,
+    completedWorkouts,
+    workoutHistory,
+    mealCategory,
+    mealTiming,
+    recommendedMealsOnly,
+  ]);
+
+  const submitAuth = async () => {
+    if (!supabaseConfigured) {
+      setAuthMessage("Cloud sync needs Supabase setup first.");
+      return;
+    }
+
+    const email = authEmail.trim();
+
+    if (!email || authPassword.length < 6) {
+      setAuthMessage("Enter an email and a password with at least 6 characters.");
+      return;
+    }
+
+    setAuthLoading(true);
+    setAuthMessage("");
+
+    try {
+      if (authMode === "signin") {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password: authPassword,
+        });
+
+        if (error) {
+          setAuthMessage(error.message);
+        } else {
+          setAuthMessage("Signed in. Your Z data is syncing.");
+          setAuthPassword("");
+        }
+      } else {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password: authPassword,
+        });
+
+        if (error) {
+          setAuthMessage(error.message);
+        } else if (!data.session) {
+          setAuthMessage("Account created. Check your email to confirm it, then sign in.");
+          setAuthMode("signin");
+          setAuthPassword("");
+        } else {
+          setAuthMessage("Account created. Your Z data is syncing.");
+          setAuthPassword("");
+        }
+      }
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const signOut = async () => {
+    setAuthLoading(true);
+    setAuthMessage("");
+
+    const { error } = await supabase.auth.signOut();
+
+    setAuthLoading(false);
+
+    if (error) {
+      setAuthMessage(error.message);
+      return;
+    }
+
+    setSessionUserId(null);
+    setSessionEmail("");
+    setCloudReady(false);
+    setCloudSyncStatus("Local only");
+    setAuthMessage("Signed out. Your local data stays on this device.");
+  };
 
   const toggleEquipment = (item: string) => {
     if (item === "No Equipment") {
@@ -2733,6 +2946,181 @@ export default function App() {
   }
 
 
+  if (step === 11) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+
+        <ScrollView
+          contentContainerStyle={styles.profileScreen}
+          showsVerticalScrollIndicator={false}
+        >
+          <TouchableOpacity onPress={() => setStep(5)}>
+            <Text style={styles.workoutBack}>‹ Back home</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.workoutScreenLabel}>PROFILE & SYNC</Text>
+          <Text style={styles.profileTitle}>Keep your Z data with you</Text>
+          <Text style={styles.profileSubtitle}>
+            Your plan already saves on this device. An account adds cloud sync
+            so the same plan and progress can follow you to another device.
+          </Text>
+
+          <View style={styles.syncStatusCard}>
+            <View style={styles.syncStatusTop}>
+              <View>
+                <Text style={styles.syncStatusLabel}>CLOUD STATUS</Text>
+                <Text style={styles.syncStatusValue}>{cloudSyncStatus}</Text>
+              </View>
+
+              <View
+                style={[
+                  styles.syncDot,
+                  cloudSyncStatus === "Synced" && styles.syncDotReady,
+                ]}
+              />
+            </View>
+
+            <Text style={styles.syncStatusText}>
+              {sessionUserId
+                ? `Signed in as ${sessionEmail}`
+                : "Local saving is active even without an account."}
+            </Text>
+          </View>
+
+          {!supabaseConfigured ? (
+            <View style={styles.profileSetupCard}>
+              <Text style={styles.profileSetupTitle}>Cloud setup needed</Text>
+              <Text style={styles.profileSetupText}>
+                The account screen is ready, but this project still needs its
+                Supabase URL and publishable key before sign-in can work.
+              </Text>
+              <Text style={styles.profileSetupText}>
+                Until then, Z Workout continues saving everything locally.
+              </Text>
+            </View>
+          ) : sessionUserId ? (
+            <>
+              <View style={styles.profileAccountCard}>
+                <View style={styles.profileAvatarLarge}>
+                  <Text style={styles.profileAvatarLetter}>
+                    {(sessionEmail[0] ?? "Z").toUpperCase()}
+                  </Text>
+                </View>
+
+                <Text style={styles.profileEmail}>{sessionEmail}</Text>
+                <Text style={styles.profileCloudNote}>
+                  Plan, progress, workout history, and meal preferences sync to
+                  this account.
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.profileSecondaryButton}
+                onPress={signOut}
+                disabled={authLoading}
+              >
+                <Text style={styles.profileSecondaryButtonText}>
+                  {authLoading ? "PLEASE WAIT..." : "SIGN OUT"}
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <View style={styles.authToggle}>
+                <TouchableOpacity
+                  style={[
+                    styles.authToggleButton,
+                    authMode === "signin" && styles.authToggleButtonActive,
+                  ]}
+                  onPress={() => {
+                    setAuthMode("signin");
+                    setAuthMessage("");
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.authToggleText,
+                      authMode === "signin" && styles.authToggleTextActive,
+                    ]}
+                  >
+                    SIGN IN
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.authToggleButton,
+                    authMode === "signup" && styles.authToggleButtonActive,
+                  ]}
+                  onPress={() => {
+                    setAuthMode("signup");
+                    setAuthMessage("");
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.authToggleText,
+                      authMode === "signup" && styles.authToggleTextActive,
+                    ]}
+                  >
+                    CREATE ACCOUNT
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <TextInput
+                value={authEmail}
+                onChangeText={setAuthEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                placeholder="Email"
+                placeholderTextColor="#5D5D5D"
+                style={styles.authInput}
+              />
+
+              <TextInput
+                value={authPassword}
+                onChangeText={setAuthPassword}
+                secureTextEntry
+                autoCapitalize="none"
+                placeholder="Password"
+                placeholderTextColor="#5D5D5D"
+                style={styles.authInput}
+              />
+
+              <TouchableOpacity
+                style={styles.profilePrimaryButton}
+                onPress={submitAuth}
+                disabled={authLoading}
+              >
+                <Text style={styles.profilePrimaryButtonText}>
+                  {authLoading
+                    ? "PLEASE WAIT..."
+                    : authMode === "signin"
+                    ? "SIGN IN & SYNC"
+                    : "CREATE ACCOUNT"}
+                </Text>
+              </TouchableOpacity>
+
+              <Text style={styles.profilePrivacyText}>
+                Z Workout only needs an email for account access. Your workout
+                plan can still be used without creating an account.
+              </Text>
+            </>
+          )}
+
+          {!!authMessage && (
+            <View style={styles.authMessageCard}>
+              <Text style={styles.authMessageText}>{authMessage}</Text>
+            </View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
@@ -2747,8 +3135,13 @@ export default function App() {
             <Text style={styles.dashboardTitle}>Ready to train?</Text>
           </View>
 
-          <TouchableOpacity style={styles.profileCircle}>
-            <Text style={styles.profileLetter}>Z</Text>
+          <TouchableOpacity
+            style={styles.profileCircle}
+            onPress={() => setStep(11)}
+          >
+            <Text style={styles.profileLetter}>
+              {sessionEmail ? sessionEmail[0].toUpperCase() : "Z"}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -2868,7 +3261,7 @@ export default function App() {
         <NavItem emoji="🏋️" text="Workout" />
         <NavItem emoji="✦" text="Coach" onPress={() => setStep(10)} />
         <NavItem emoji="📈" text="Progress" onPress={() => setStep(8)} />
-        <NavItem emoji="●" text="Profile" />
+        <NavItem emoji="●" text="Profile" onPress={() => setStep(11)} />
       </View>
     </SafeAreaView>
   );
@@ -4674,6 +5067,233 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     marginTop: 12,
+  },
+
+  profileScreen: {
+    padding: 22,
+    paddingTop: 34,
+    paddingBottom: 60,
+  },
+
+  profileTitle: {
+    color: COLORS.white,
+    fontSize: 31,
+    lineHeight: 37,
+    fontWeight: "900",
+    marginTop: 7,
+  },
+
+  profileSubtitle: {
+    color: COLORS.muted,
+    lineHeight: 21,
+    marginTop: 9,
+    marginBottom: 20,
+  },
+
+  syncStatusCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    padding: 17,
+    marginBottom: 14,
+  },
+
+  syncStatusTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  syncStatusLabel: {
+    color: COLORS.muted,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
+  syncStatusValue: {
+    color: COLORS.white,
+    fontSize: 20,
+    fontWeight: "900",
+    marginTop: 4,
+  },
+
+  syncStatusText: {
+    color: COLORS.muted,
+    lineHeight: 19,
+    marginTop: 10,
+    fontSize: 13,
+  },
+
+  syncDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#555555",
+  },
+
+  syncDotReady: {
+    backgroundColor: COLORS.green,
+  },
+
+  profileSetupCard: {
+    backgroundColor: "#10160C",
+    borderWidth: 1,
+    borderColor: "#2E4516",
+    borderRadius: 20,
+    padding: 18,
+  },
+
+  profileSetupTitle: {
+    color: COLORS.green,
+    fontSize: 18,
+    fontWeight: "900",
+    marginBottom: 7,
+  },
+
+  profileSetupText: {
+    color: COLORS.muted,
+    lineHeight: 20,
+    marginBottom: 7,
+  },
+
+  profileAccountCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 22,
+    padding: 20,
+    alignItems: "center",
+  },
+
+  profileAvatarLarge: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: COLORS.green,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+
+  profileAvatarLetter: {
+    color: COLORS.background,
+    fontSize: 28,
+    fontWeight: "900",
+  },
+
+  profileEmail: {
+    color: COLORS.white,
+    fontSize: 17,
+    fontWeight: "900",
+  },
+
+  profileCloudNote: {
+    color: COLORS.muted,
+    lineHeight: 20,
+    textAlign: "center",
+    marginTop: 8,
+  },
+
+  authToggle: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 13,
+  },
+
+  authToggleButton: {
+    flex: 1,
+    minHeight: 45,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
+
+  authToggleButtonActive: {
+    backgroundColor: COLORS.green,
+    borderColor: COLORS.green,
+  },
+
+  authToggleText: {
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: "900",
+  },
+
+  authToggleTextActive: {
+    color: COLORS.background,
+  },
+
+  authInput: {
+    backgroundColor: COLORS.card,
+    color: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    marginBottom: 10,
+  },
+
+  profilePrimaryButton: {
+    backgroundColor: COLORS.green,
+    borderRadius: 17,
+    minHeight: 54,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 3,
+  },
+
+  profilePrimaryButtonText: {
+    color: COLORS.background,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
+
+  profileSecondaryButton: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    borderRadius: 17,
+    minHeight: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+  },
+
+  profileSecondaryButtonText: {
+    color: COLORS.white,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
+
+  profilePrivacyText: {
+    color: COLORS.muted,
+    textAlign: "center",
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 12,
+  },
+
+  authMessageCard: {
+    backgroundColor: COLORS.cardSoft,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 15,
+    padding: 13,
+    marginTop: 12,
+  },
+
+  authMessageText: {
+    color: COLORS.white,
+    lineHeight: 19,
+    fontSize: 13,
   },
 
   dashboard: {
