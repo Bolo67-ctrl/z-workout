@@ -2148,6 +2148,68 @@ export default function App() {
     ? Math.min(100, Math.round((completedWorkouts / trainingDays) * 100))
     : 0;
 
+  const progressWeeks = useMemo(() => {
+    const startOfWeek = (date: Date) => {
+      const start = new Date(date);
+      const day = start.getDay();
+      const difference = start.getDate() - day + (day === 0 ? -6 : 1);
+
+      start.setDate(difference);
+      start.setHours(0, 0, 0, 0);
+      return start;
+    };
+
+    const now = new Date();
+    const currentStart = startOfWeek(now);
+
+    return [3, 2, 1, 0].map((weeksAgo) => {
+      const start = new Date(currentStart);
+      start.setDate(start.getDate() - weeksAgo * 7);
+
+      const end = new Date(start);
+      end.setDate(end.getDate() + 7);
+
+      const count = workoutHistory.filter((item) => {
+        const completedAt = new Date(item.completedAt);
+        return completedAt >= start && completedAt < end;
+      }).length;
+
+      return {
+        key: start.toISOString().slice(0, 10),
+        label:
+          weeksAgo === 0
+            ? "This week"
+            : start.toLocaleDateString(undefined, {
+                month: "short",
+                day: "numeric",
+              }),
+        count,
+      };
+    });
+  }, [workoutHistory]);
+
+  const activeWeeks = useMemo(() => {
+    const keys = new Set<string>();
+
+    workoutHistory.forEach((item) => {
+      const date = new Date(item.completedAt);
+      const monday = new Date(date);
+      const day = monday.getDay();
+      const difference = monday.getDate() - day + (day === 0 ? -6 : 1);
+
+      monday.setDate(difference);
+      monday.setHours(0, 0, 0, 0);
+      keys.add(monday.toISOString().slice(0, 10));
+    });
+
+    return keys.size;
+  }, [workoutHistory]);
+
+  const maxProgressWeekCount = Math.max(
+    1,
+    ...progressWeeks.map((week) => week.count)
+  );
+
   const filteredExercises = useMemo(() => {
     const query = exerciseSearch.trim().toLowerCase();
 
@@ -3737,11 +3799,34 @@ export default function App() {
           </TouchableOpacity>
 
           <Text style={styles.workoutScreenLabel}>Z PROGRESS</Text>
-          <Text style={styles.progressScreenTitle}>Your training activity</Text>
+          <Text style={styles.progressScreenTitle}>Your training dashboard</Text>
           <Text style={styles.progressScreenSubtitle}>
-            Track completed sessions and consistency without turning training
-            into a race.
+            See the sessions you have completed, how your current week is going,
+            and your recent activity without turning training into a competition.
           </Text>
+
+          <View style={styles.progressFocusCard}>
+            <View style={styles.progressFocusTop}>
+              <View style={styles.progressFocusTextWrap}>
+                <Text style={styles.progressFocusLabel}>CURRENT FOCUS</Text>
+                <Text style={styles.progressFocusTitle}>{mealGoalLabel}</Text>
+                <Text style={styles.progressFocusMeta}>
+                  {trainingDays ?? "-"} sessions/week • {workoutLength ?? "-"} •{" "}
+                  {workoutPlace === "gym" ? "Gym" : "Home"}
+                </Text>
+              </View>
+              <Text style={styles.progressFocusEmoji}>⚡</Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.progressFocusButton}
+              onPress={() => setStep(13)}
+            >
+              <Text style={styles.progressFocusButtonText}>
+                VIEW WEEKLY PLAN
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.progressStatGrid}>
             <View style={styles.progressStatCard}>
@@ -3757,24 +3842,22 @@ export default function App() {
             </View>
 
             <View style={styles.progressStatCard}>
-              <Text style={styles.progressStatValue}>{workoutLength ?? "-"}</Text>
-              <Text style={styles.progressStatLabel}>Planned length</Text>
+              <Text style={styles.progressStatValue}>{activeWeeks}</Text>
+              <Text style={styles.progressStatLabel}>Active weeks</Text>
             </View>
 
             <View style={styles.progressStatCard}>
-              <Text style={styles.progressStatValue}>
-                {workoutExercises.length}
-              </Text>
-              <Text style={styles.progressStatLabel}>Exercises/session</Text>
+              <Text style={styles.progressStatValue}>{workoutLength ?? "-"}</Text>
+              <Text style={styles.progressStatLabel}>Planned session</Text>
             </View>
           </View>
 
           <View style={styles.progressGoalCard}>
             <View style={styles.progressGoalHeader}>
               <View>
-                <Text style={styles.progressGoalLabel}>WEEKLY PLAN</Text>
+                <Text style={styles.progressGoalLabel}>THIS WEEK</Text>
                 <Text style={styles.progressGoalValue}>
-                  {weeklyProgressPercent}% complete
+                  {weeklyProgressPercent}% of plan completed
                 </Text>
               </View>
               <Text style={styles.progressGoalCount}>
@@ -3791,8 +3874,78 @@ export default function App() {
               />
             </View>
 
+            <View style={styles.progressWeekSchedule}>
+              {WEEKDAYS.map((day) => {
+                const session =
+                  weeklySessions.find((item) => item.day === day) ?? null;
+                const completed =
+                  !!session && completedPlanSessionIds.includes(session.id);
+                const isToday = day === todayWeekday;
+
+                return (
+                  <View
+                    key={day}
+                    style={[
+                      styles.progressWeekDay,
+                      session && styles.progressWeekDayPlanned,
+                      completed && styles.progressWeekDayCompleted,
+                      isToday && styles.progressWeekDayToday,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.progressWeekDayLabel,
+                        session && styles.progressWeekDayLabelPlanned,
+                        completed && styles.progressWeekDayLabelCompleted,
+                      ]}
+                    >
+                      {day}
+                    </Text>
+                    <Text style={styles.progressWeekDayMark}>
+                      {completed ? "✓" : session ? "•" : "—"}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+
             <Text style={styles.progressGoalNote}>
-              Rest days count as part of a balanced plan too.
+              Planned recovery days are part of the week too.
+            </Text>
+          </View>
+
+          <Text style={styles.progressSectionTitle}>Last 4 weeks</Text>
+
+          <View style={styles.progressTrendCard}>
+            {progressWeeks.map((week) => {
+              const width =
+                week.count === 0
+                  ? 0
+                  : Math.max(
+                      12,
+                      Math.round((week.count / maxProgressWeekCount) * 100)
+                    );
+
+              return (
+                <View key={week.key} style={styles.progressTrendRow}>
+                  <Text style={styles.progressTrendLabel}>{week.label}</Text>
+
+                  <View style={styles.progressTrendTrack}>
+                    <View
+                      style={[
+                        styles.progressTrendFill,
+                        { width: `${width}%` },
+                      ]}
+                    />
+                  </View>
+
+                  <Text style={styles.progressTrendValue}>{week.count}</Text>
+                </View>
+              );
+            })}
+
+            <Text style={styles.progressTrendNote}>
+              This view shows completed sessions, not a target you need to beat.
             </Text>
           </View>
 
@@ -3800,13 +3953,15 @@ export default function App() {
 
           {workoutHistory.length === 0 ? (
             <View style={styles.progressEmptyCard}>
-              <Text style={styles.progressEmptyTitle}>No completed sessions yet</Text>
+              <Text style={styles.progressEmptyTitle}>
+                No completed sessions yet
+              </Text>
               <Text style={styles.progressEmptyText}>
                 Finish a guided workout and it will appear here.
               </Text>
             </View>
           ) : (
-            workoutHistory.slice(0, 8).map((item) => (
+            workoutHistory.slice(0, 10).map((item) => (
               <View key={item.id} style={styles.historyCard}>
                 <View style={styles.historyIcon}>
                   <Text style={styles.historyIconText}>✓</Text>
@@ -3818,6 +3973,11 @@ export default function App() {
                     {new Date(item.completedAt).toLocaleDateString(undefined, {
                       month: "short",
                       day: "numeric",
+                      year:
+                        new Date(item.completedAt).getFullYear() !==
+                        new Date().getFullYear()
+                          ? "numeric"
+                          : undefined,
                     })}{" "}
                     • {item.exercises} exercises • {item.plannedDuration}
                   </Text>
@@ -3827,17 +3987,18 @@ export default function App() {
           )}
 
           <View style={styles.progressMindsetCard}>
-            <Text style={styles.progressMindsetTitle}>Consistency over perfection</Text>
+            <Text style={styles.progressMindsetTitle}>
+              Progress includes recovery
+            </Text>
             <Text style={styles.progressMindsetText}>
-              A shorter session or an extra recovery day can still be part of a
-              healthy routine.
+              Training regularly matters, but rest, sleep, food, and easier days
+              are part of a healthy routine too.
             </Text>
           </View>
         </ScrollView>
       </SafeAreaView>
     );
   }
-
 
   if (step === 9) {
     return (
@@ -6559,6 +6720,67 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
 
+  progressFocusCard: {
+    backgroundColor: "#10160C",
+    borderWidth: 1,
+    borderColor: "#2E4516",
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 16,
+  },
+
+  progressFocusTop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+
+  progressFocusTextWrap: {
+    flex: 1,
+  },
+
+  progressFocusLabel: {
+    color: COLORS.green,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
+  progressFocusTitle: {
+    color: COLORS.white,
+    fontSize: 22,
+    fontWeight: "900",
+    marginTop: 5,
+  },
+
+  progressFocusMeta: {
+    color: COLORS.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 5,
+  },
+
+  progressFocusEmoji: {
+    fontSize: 28,
+    marginLeft: 12,
+  },
+
+  progressFocusButton: {
+    minHeight: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#385015",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 15,
+  },
+
+  progressFocusButtonText: {
+    color: COLORS.green,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
+
   progressStatGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -6637,10 +6859,114 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.green,
   },
 
+  progressWeekSchedule: {
+    flexDirection: "row",
+    gap: 5,
+    marginTop: 16,
+  },
+
+  progressWeekDay: {
+    flex: 1,
+    minHeight: 54,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.cardSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  progressWeekDayPlanned: {
+    borderColor: "#344716",
+    backgroundColor: "#11170C",
+  },
+
+  progressWeekDayCompleted: {
+    borderColor: "#4C711D",
+    backgroundColor: "#17200F",
+  },
+
+  progressWeekDayToday: {
+    borderWidth: 2,
+    borderColor: COLORS.green,
+  },
+
+  progressWeekDayLabel: {
+    color: COLORS.muted,
+    fontSize: 9,
+    fontWeight: "900",
+  },
+
+  progressWeekDayLabelPlanned: {
+    color: COLORS.white,
+  },
+
+  progressWeekDayLabelCompleted: {
+    color: COLORS.green,
+  },
+
+  progressWeekDayMark: {
+    color: COLORS.green,
+    fontSize: 16,
+    fontWeight: "900",
+    marginTop: 3,
+  },
+
   progressGoalNote: {
     color: COLORS.muted,
     fontSize: 12,
     marginTop: 10,
+  },
+
+  progressTrendCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 24,
+  },
+
+  progressTrendRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 13,
+  },
+
+  progressTrendLabel: {
+    width: 72,
+    color: COLORS.muted,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+
+  progressTrendTrack: {
+    flex: 1,
+    height: 10,
+    borderRadius: 8,
+    backgroundColor: "#242424",
+    overflow: "hidden",
+  },
+
+  progressTrendFill: {
+    height: "100%",
+    borderRadius: 8,
+    backgroundColor: COLORS.green,
+  },
+
+  progressTrendValue: {
+    width: 30,
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: "900",
+    textAlign: "right",
+  },
+
+  progressTrendNote: {
+    color: COLORS.muted,
+    fontSize: 11,
+    lineHeight: 17,
+    marginTop: 1,
   },
 
   progressSectionTitle: {
