@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   SafeAreaView,
   ScrollView,
-  Image,
+  Animated,
+  Easing,
   StyleSheet,
   Text,
   TextInput,
@@ -173,27 +174,71 @@ const EQUIPMENT = [
   "Kettlebell",
 ];
 
-const EXERCISE_DEMOS: Record<
-  string,
-  { uri: string; credit: string }
-> = {
-  "Push-Ups": {
-    uri: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Pushups.gif",
-    credit: "Wensceslao • Wikimedia Commons • CC BY-SA 4.0",
-  },
-  "Bodyweight Squats": {
-    uri: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Squats.gif",
-    credit: "Wensceslao • Wikimedia Commons • CC BY-SA 4.0",
-  },
-  "Calf Raises": {
-    uri: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Standing-calf-raises-1.gif",
-    credit: "Everkinetic • Wikimedia Commons • CC BY-SA 3.0",
-  },
-  "Lat Pulldown": {
-    uri: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Wide-grip-lat-pull-down-1.gif",
-    credit: "Everkinetic • Wikimedia Commons • CC BY-SA 3.0",
-  },
+type ExerciseMotionType =
+  | "push"
+  | "squat"
+  | "lunge"
+  | "hinge"
+  | "pull"
+  | "press"
+  | "core"
+  | "mobility";
+
+const getExerciseMotionType = (name: string): ExerciseMotionType => {
+  if (
+    name.includes("Push-Up") ||
+    name.includes("Chest Press") ||
+    name.includes("Floor Press")
+  ) {
+    return "push";
+  }
+
+  if (
+    name.includes("Squat") ||
+    name.includes("Leg Press") ||
+    name.includes("Calf")
+  ) {
+    return "squat";
+  }
+
+  if (name.includes("Lunge") || name.includes("Leg Curl")) {
+    return "lunge";
+  }
+
+  if (name.includes("Romanian Deadlift") || name.includes("Glute Bridge")) {
+    return "hinge";
+  }
+
+  if (
+    name.includes("Row") ||
+    name.includes("Pulldown") ||
+    name.includes("Bird Dog")
+  ) {
+    return "pull";
+  }
+
+  if (name.includes("Shoulder Press") || name.includes("Wall Slides")) {
+    return "press";
+  }
+
+  if (name.includes("Dead Bug") || name.includes("Plank")) {
+    return "core";
+  }
+
+  return "mobility";
 };
+
+const getMotionInstruction = (type: ExerciseMotionType) => {
+  if (type === "push") return "Lower with control • press smoothly";
+  if (type === "squat") return "Sit down comfortably • stand tall";
+  if (type === "lunge") return "Step and lower gently • return with control";
+  if (type === "hinge") return "Hinge or lift the hips • keep it smooth";
+  if (type === "pull") return "Reach long • pull without jerking";
+  if (type === "press") return "Start comfortable • press without forcing";
+  if (type === "core") return "Stay steady • move slowly";
+  return "Move through a comfortable range";
+};
+
 
 const EXERCISE_LIBRARY: ExerciseLibraryItem[] = [
   {
@@ -4424,36 +4469,9 @@ export default function App() {
             </View>
           )}
 
-          <Text style={styles.exerciseGuideSectionTitle}>Animated demo</Text>
+          <Text style={styles.exerciseGuideSectionTitle}>Z motion demo</Text>
 
-          {EXERCISE_DEMOS[selectedLibraryExercise.name] ? (
-            <View style={styles.exerciseDemoCard}>
-              <Image
-                source={{
-                  uri: EXERCISE_DEMOS[selectedLibraryExercise.name].uri,
-                }}
-                style={styles.exerciseDemoImage}
-                resizeMode="contain"
-              />
-              <Text style={styles.exerciseDemoCaption}>
-                Short looping movement demo
-              </Text>
-              <Text style={styles.exerciseDemoCredit}>
-                {EXERCISE_DEMOS[selectedLibraryExercise.name].credit}
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.exerciseDemoPlaceholder}>
-              <Text style={styles.exerciseDemoPlaceholderIcon}>▶</Text>
-              <Text style={styles.exerciseDemoPlaceholderTitle}>
-                Demo clip coming next
-              </Text>
-              <Text style={styles.exerciseDemoPlaceholderText}>
-                We are adding short movement demos exercise by exercise. Use the
-                form cue below until this one has a clip.
-              </Text>
-            </View>
-          )}
+          <ExerciseMotionDemo exercise={selectedLibraryExercise} />
 
           <View style={styles.exerciseGuideInfoCard}>
             <Text style={styles.exerciseGuideInfoLabel}>FOCUS</Text>
@@ -4997,6 +5015,196 @@ export default function App() {
         <NavItem emoji="●" text="Profile" onPress={() => setStep(11)} />
       </View>
     </SafeAreaView>
+  );
+}
+
+function ExerciseMotionDemo({
+  exercise,
+}: {
+  exercise: ExerciseLibraryItem;
+}) {
+  const motion = useRef(new Animated.Value(0)).current;
+  const type = getExerciseMotionType(exercise.name);
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(motion, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.inOut(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(motion, {
+          toValue: 0,
+          duration: 900,
+          easing: Easing.inOut(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    loop.start();
+    return () => loop.stop();
+  }, [motion]);
+
+  const vertical = motion.interpolate({
+    inputRange: [0, 1],
+    outputRange:
+      type === "squat" || type === "lunge"
+        ? [0, 34]
+        : type === "hinge"
+        ? [18, -8]
+        : type === "push" || type === "core"
+        ? [0, 18]
+        : [0, -14],
+  });
+
+  const rotate = motion.interpolate({
+    inputRange: [0, 1],
+    outputRange:
+      type === "hinge"
+        ? ["0deg", "24deg"]
+        : type === "mobility"
+        ? ["-7deg", "7deg"]
+        : ["0deg", "0deg"],
+  });
+
+  const armMove = motion.interpolate({
+    inputRange: [0, 1],
+    outputRange:
+      type === "pull"
+        ? [0, 30]
+        : type === "press"
+        ? [24, -24]
+        : type === "push"
+        ? [0, 14]
+        : [0, 8],
+  });
+
+  const pulse = motion.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.35, 1],
+  });
+
+  const horizontalPose = type === "push" || type === "core";
+
+  return (
+    <View style={styles.zMotionCard}>
+      <View style={styles.zMotionHeader}>
+        <View>
+          <Text style={styles.zMotionTag}>Z MOTION</Text>
+          <Text style={styles.zMotionName}>{exercise.name}</Text>
+        </View>
+
+        <View style={styles.zMotionLoopBadge}>
+          <View style={styles.zMotionLiveDot} />
+          <Text style={styles.zMotionLoopText}>LOOP</Text>
+        </View>
+      </View>
+
+      <View style={styles.zMotionStage}>
+        <View style={styles.zMotionGridLineTop} />
+        <View style={styles.zMotionGridLineMiddle} />
+        <View style={styles.zMotionGridLineBottom} />
+
+        <Animated.View
+          style={[
+            styles.zMotionFigure,
+            horizontalPose && styles.zMotionFigureHorizontal,
+            {
+              transform: [
+                { translateY: vertical },
+                { rotate },
+                ...(horizontalPose ? [{ rotate: "90deg" as const }] : []),
+              ],
+            },
+          ]}
+        >
+          <View style={styles.zMotionHead} />
+          <View style={styles.zMotionTorso} />
+
+          <Animated.View
+            style={[
+              styles.zMotionArm,
+              styles.zMotionArmLeft,
+              { transform: [{ translateY: armMove }, { rotate: "24deg" }] },
+            ]}
+          />
+          <Animated.View
+            style={[
+              styles.zMotionArm,
+              styles.zMotionArmRight,
+              { transform: [{ translateY: armMove }, { rotate: "-24deg" }] },
+            ]}
+          />
+
+          <View style={[styles.zMotionLeg, styles.zMotionLegLeft]} />
+          <View style={[styles.zMotionLeg, styles.zMotionLegRight]} />
+
+          {(type === "pull" || type === "press" || type === "hinge") && (
+            <View style={styles.zMotionEquipmentBar}>
+              <View style={styles.zMotionEquipmentWeight} />
+              <View
+                style={[
+                  styles.zMotionEquipmentWeight,
+                  styles.zMotionEquipmentWeightRight,
+                ]}
+              />
+            </View>
+          )}
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            styles.zMotionDirection,
+            {
+              opacity: pulse,
+              transform: [
+                {
+                  translateY: motion.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [8, -8],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Text style={styles.zMotionDirectionArrow}>
+            {type === "pull" ? "↔" : type === "push" ? "↕" : "↕"}
+          </Text>
+        </Animated.View>
+
+        <View style={styles.zMotionFloor} />
+      </View>
+
+      <View style={styles.zMotionFooter}>
+        <View style={styles.zMotionStepBadge}>
+          <Text style={styles.zMotionStepNumber}>1</Text>
+          <Text style={styles.zMotionStepText}>START</Text>
+        </View>
+
+        <View style={styles.zMotionConnector} />
+
+        <View style={styles.zMotionStepBadge}>
+          <Text style={styles.zMotionStepNumber}>2</Text>
+          <Text style={styles.zMotionStepText}>MOVE</Text>
+        </View>
+
+        <View style={styles.zMotionConnector} />
+
+        <View style={styles.zMotionStepBadge}>
+          <Text style={styles.zMotionStepNumber}>3</Text>
+          <Text style={styles.zMotionStepText}>RETURN</Text>
+        </View>
+      </View>
+
+      <Text style={styles.zMotionInstruction}>
+        {getMotionInstruction(type)}
+      </Text>
+      <Text style={styles.zMotionCue}>{exercise.cue}</Text>
+    </View>
   );
 }
 
@@ -7811,73 +8019,267 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  exerciseDemoCard: {
-    backgroundColor: COLORS.card,
+  zMotionCard: {
+    backgroundColor: "#0C0F08",
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 20,
-    padding: 12,
+    borderColor: "#2F4515",
+    borderRadius: 22,
+    padding: 14,
     overflow: "hidden",
   },
 
-  exerciseDemoImage: {
-    width: "100%",
-    height: 220,
-    borderRadius: 15,
-    backgroundColor: "#0B0B0B",
+  zMotionHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 12,
   },
 
-  exerciseDemoCaption: {
-    color: COLORS.white,
-    fontSize: 13,
-    fontWeight: "900",
-    marginTop: 10,
-  },
-
-  exerciseDemoCredit: {
-    color: COLORS.muted,
+  zMotionTag: {
+    color: COLORS.green,
     fontSize: 9,
-    lineHeight: 14,
-    marginTop: 4,
+    fontWeight: "900",
+    letterSpacing: 1.2,
   },
 
-  exerciseDemoPlaceholder: {
-    minHeight: 180,
-    backgroundColor: COLORS.card,
+  zMotionName: {
+    color: COLORS.white,
+    fontSize: 17,
+    fontWeight: "900",
+    marginTop: 3,
+  },
+
+  zMotionLoopBadge: {
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: "#354A18",
+    backgroundColor: "#121A0C",
     borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+  },
+
+  zMotionLiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.green,
+    marginRight: 6,
+  },
+
+  zMotionLoopText: {
+    color: COLORS.green,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+
+  zMotionStage: {
+    height: 230,
+    borderRadius: 18,
+    backgroundColor: "#080A06",
+    borderWidth: 1,
+    borderColor: "#202A12",
+    overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
-    padding: 22,
   },
 
-  exerciseDemoPlaceholderIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+  zMotionGridLineTop: {
+    position: "absolute",
+    top: 56,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: "#18210E",
+  },
+
+  zMotionGridLineMiddle: {
+    position: "absolute",
+    top: 114,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: "#18210E",
+  },
+
+  zMotionGridLineBottom: {
+    position: "absolute",
+    top: 172,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: "#18210E",
+  },
+
+  zMotionFigure: {
+    width: 100,
+    height: 164,
+    alignItems: "center",
+    position: "relative",
+  },
+
+  zMotionFigureHorizontal: {
+    marginTop: 20,
+  },
+
+  zMotionHead: {
+    width: 27,
+    height: 27,
+    borderRadius: 14,
+    borderWidth: 4,
+    borderColor: COLORS.green,
+    backgroundColor: "#080A06",
+    zIndex: 4,
+  },
+
+  zMotionTorso: {
+    width: 10,
+    height: 65,
+    borderRadius: 8,
+    backgroundColor: COLORS.green,
+    marginTop: 4,
+    zIndex: 3,
+  },
+
+  zMotionArm: {
+    position: "absolute",
+    top: 48,
+    width: 8,
+    height: 58,
+    borderRadius: 6,
+    backgroundColor: COLORS.green,
+  },
+
+  zMotionArmLeft: {
+    left: 31,
+  },
+
+  zMotionArmRight: {
+    right: 31,
+  },
+
+  zMotionLeg: {
+    position: "absolute",
+    top: 92,
+    width: 9,
+    height: 66,
+    borderRadius: 6,
+    backgroundColor: COLORS.green,
+  },
+
+  zMotionLegLeft: {
+    left: 37,
+    transform: [{ rotate: "12deg" }],
+  },
+
+  zMotionLegRight: {
+    right: 37,
+    transform: [{ rotate: "-12deg" }],
+  },
+
+  zMotionEquipmentBar: {
+    position: "absolute",
+    top: 38,
+    left: 16,
+    right: 16,
+    height: 6,
+    borderRadius: 4,
+    backgroundColor: COLORS.white,
+    opacity: 0.9,
+  },
+
+  zMotionEquipmentWeight: {
+    position: "absolute",
+    left: -6,
+    top: -8,
+    width: 8,
+    height: 22,
+    borderRadius: 3,
+    backgroundColor: COLORS.green,
+  },
+
+  zMotionEquipmentWeightRight: {
+    left: undefined,
+    right: -6,
+  },
+
+  zMotionDirection: {
+    position: "absolute",
+    right: 24,
+    top: 80,
+  },
+
+  zMotionDirectionArrow: {
+    color: COLORS.green,
+    fontSize: 31,
+    fontWeight: "900",
+  },
+
+  zMotionFloor: {
+    position: "absolute",
+    left: 22,
+    right: 22,
+    bottom: 18,
+    height: 2,
+    backgroundColor: "#354A18",
+  },
+
+  zMotionFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 13,
+  },
+
+  zMotionStepBadge: {
+    alignItems: "center",
+  },
+
+  zMotionStepNumber: {
+    width: 25,
+    height: 25,
+    borderRadius: 13,
     backgroundColor: COLORS.green,
     color: COLORS.background,
     textAlign: "center",
-    lineHeight: 52,
-    fontSize: 20,
+    lineHeight: 25,
+    fontSize: 10,
     fontWeight: "900",
   },
 
-  exerciseDemoPlaceholderTitle: {
-    color: COLORS.white,
-    fontSize: 16,
+  zMotionStepText: {
+    color: COLORS.muted,
+    fontSize: 8,
     fontWeight: "900",
+    letterSpacing: 0.5,
+    marginTop: 4,
+  },
+
+  zMotionConnector: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#354A18",
+    marginHorizontal: 8,
+    marginBottom: 13,
+  },
+
+  zMotionInstruction: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "900",
+    textAlign: "center",
     marginTop: 12,
   },
 
-  exerciseDemoPlaceholderText: {
+  zMotionCue: {
     color: COLORS.muted,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 17,
     textAlign: "center",
     marginTop: 5,
   },
+
 
   exerciseGuideInfoCard: {
     backgroundColor: COLORS.card,
