@@ -5031,13 +5031,13 @@ function ExerciseMotionDemo({
       Animated.sequence([
         Animated.timing(motion, {
           toValue: 1,
-          duration: 900,
+          duration: 950,
           easing: Easing.inOut(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(motion, {
           toValue: 0,
-          duration: 900,
+          duration: 950,
           easing: Easing.inOut(Easing.cubic),
           useNativeDriver: true,
         }),
@@ -5048,52 +5048,66 @@ function ExerciseMotionDemo({
     return () => loop.stop();
   }, [motion]);
 
-  const vertical = motion.interpolate({
+  const bodyDrop = motion.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 34],
+  });
+
+  const upperArmRotate = motion.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["8deg", "48deg"],
+  });
+
+  const forearmRotate = motion.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["-8deg", "-42deg"],
+  });
+
+  const standingDrop = motion.interpolate({
     inputRange: [0, 1],
     outputRange:
       type === "squat" || type === "lunge"
         ? [0, 34]
         : type === "hinge"
-        ? [18, -8]
-        : type === "push" || type === "core"
-        ? [0, 18]
-        : [0, -14],
+        ? [0, 10]
+        : [0, -12],
   });
 
-  const rotate = motion.interpolate({
+  const torsoRotate = motion.interpolate({
     inputRange: [0, 1],
     outputRange:
       type === "hinge"
-        ? ["0deg", "24deg"]
+        ? ["0deg", "26deg"]
         : type === "mobility"
-        ? ["-7deg", "7deg"]
+        ? ["-4deg", "5deg"]
         : ["0deg", "0deg"],
   });
 
-  const armMove = motion.interpolate({
+  const armLift = motion.interpolate({
     inputRange: [0, 1],
     outputRange:
-      type === "pull"
-        ? [0, 30]
-        : type === "press"
-        ? [24, -24]
-        : type === "push"
-        ? [0, 14]
+      type === "press"
+        ? [12, -36]
+        : type === "pull"
+        ? [0, 24]
         : [0, 8],
   });
 
   const pulse = motion.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.35, 1],
+    outputRange: [0.4, 1],
   });
 
-  const horizontalPose = type === "push" || type === "core";
+  const isPushUp =
+    exercise.name.includes("Push-Up") ||
+    exercise.name.includes("Floor Press") ||
+    exercise.name.includes("Chest Press");
 
   return (
     <View style={styles.zMotionCard}>
       <View style={styles.zMotionHeader}>
         <View>
-          <Text style={styles.zMotionTag}>Z MOTION</Text>
+          <Text style={styles.zMotionTag}>Z FORM DEMO</Text>
           <Text style={styles.zMotionName}>{exercise.name}</Text>
         </View>
 
@@ -5108,52 +5122,106 @@ function ExerciseMotionDemo({
         <View style={styles.zMotionGridLineMiddle} />
         <View style={styles.zMotionGridLineBottom} />
 
-        <Animated.View
-          style={[
-            styles.zMotionFigure,
-            horizontalPose && styles.zMotionFigureHorizontal,
-            {
-              transform: [
-                { translateY: vertical },
-                { rotate },
-                ...(horizontalPose ? [{ rotate: "90deg" as const }] : []),
-              ],
-            },
-          ]}
-        >
-          <View style={styles.zMotionHead} />
-          <View style={styles.zMotionTorso} />
-
+        {isPushUp ? (
           <Animated.View
             style={[
-              styles.zMotionArm,
-              styles.zMotionArmLeft,
-              { transform: [{ translateY: armMove }, { rotate: "24deg" }] },
+              styles.pushAvatarBody,
+              { transform: [{ translateY: bodyDrop }] },
             ]}
-          />
-          <Animated.View
-            style={[
-              styles.zMotionArm,
-              styles.zMotionArmRight,
-              { transform: [{ translateY: armMove }, { rotate: "-24deg" }] },
-            ]}
-          />
-
-          <View style={[styles.zMotionLeg, styles.zMotionLegLeft]} />
-          <View style={[styles.zMotionLeg, styles.zMotionLegRight]} />
-
-          {(type === "pull" || type === "press" || type === "hinge") && (
-            <View style={styles.zMotionEquipmentBar}>
-              <View style={styles.zMotionEquipmentWeight} />
-              <View
-                style={[
-                  styles.zMotionEquipmentWeight,
-                  styles.zMotionEquipmentWeightRight,
-                ]}
-              />
+          >
+            <View style={styles.pushAvatarHead}>
+              <View style={styles.pushAvatarHair} />
+              <View style={styles.pushAvatarEar} />
             </View>
-          )}
-        </Animated.View>
+
+            <View style={styles.pushAvatarNeck} />
+            <View style={styles.pushAvatarShirt} />
+            <View style={styles.pushAvatarShorts} />
+
+            <Animated.View
+              style={[
+                styles.pushAvatarUpperArm,
+                styles.pushAvatarUpperArmFront,
+                { transform: [{ rotate: upperArmRotate }] },
+              ]}
+            />
+            <Animated.View
+              style={[
+                styles.pushAvatarForearm,
+                styles.pushAvatarForearmFront,
+                { transform: [{ rotate: forearmRotate }] },
+              ]}
+            />
+
+            <Animated.View
+              style={[
+                styles.pushAvatarUpperArm,
+                styles.pushAvatarUpperArmBack,
+                { transform: [{ rotate: upperArmRotate }] },
+              ]}
+            />
+            <Animated.View
+              style={[
+                styles.pushAvatarForearm,
+                styles.pushAvatarForearmBack,
+                { transform: [{ rotate: forearmRotate }] },
+              ]}
+            />
+
+            <View style={styles.pushAvatarThigh} />
+            <View style={styles.pushAvatarShin} />
+            <View style={styles.pushAvatarShoe} />
+          </Animated.View>
+        ) : (
+          <Animated.View
+            style={[
+              styles.humanAvatar,
+              {
+                transform: [
+                  { translateY: standingDrop },
+                  { rotate: torsoRotate },
+                ],
+              },
+            ]}
+          >
+            <View style={styles.humanAvatarHead}>
+              <View style={styles.humanAvatarHair} />
+              <View style={styles.humanAvatarEar} />
+            </View>
+
+            <View style={styles.humanAvatarNeck} />
+            <View style={styles.humanAvatarShirt} />
+            <View style={styles.humanAvatarShorts} />
+
+            <Animated.View
+              style={[
+                styles.humanAvatarArm,
+                styles.humanAvatarArmLeft,
+                { transform: [{ translateY: armLift }, { rotate: "10deg" }] },
+              ]}
+            />
+            <Animated.View
+              style={[
+                styles.humanAvatarArm,
+                styles.humanAvatarArmRight,
+                { transform: [{ translateY: armLift }, { rotate: "-10deg" }] },
+              ]}
+            />
+
+            <View style={[styles.humanAvatarLeg, styles.humanAvatarLegLeft]} />
+            <View style={[styles.humanAvatarLeg, styles.humanAvatarLegRight]} />
+            <View style={[styles.humanAvatarShoe, styles.humanAvatarShoeLeft]} />
+            <View style={[styles.humanAvatarShoe, styles.humanAvatarShoeRight]} />
+
+            {(type === "pull" || type === "press" || type === "hinge") && (
+              <View style={styles.humanAvatarEquipment}>
+                <View style={styles.humanAvatarEquipmentHandle} />
+                <View style={styles.humanAvatarWeightLeft} />
+                <View style={styles.humanAvatarWeightRight} />
+              </View>
+            )}
+          </Animated.View>
+        )}
 
         <Animated.View
           style={[
@@ -5164,7 +5232,7 @@ function ExerciseMotionDemo({
                 {
                   translateY: motion.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [8, -8],
+                    outputRange: [9, -9],
                   }),
                 },
               ],
@@ -5172,7 +5240,7 @@ function ExerciseMotionDemo({
           ]}
         >
           <Text style={styles.zMotionDirectionArrow}>
-            {type === "pull" ? "↔" : type === "push" ? "↕" : "↕"}
+            {isPushUp ? "↕" : type === "pull" ? "↔" : "↕"}
           </Text>
         </Animated.View>
 
@@ -8076,7 +8144,7 @@ const styles = StyleSheet.create({
   },
 
   zMotionStage: {
-    height: 230,
+    height: 250,
     borderRadius: 18,
     backgroundColor: "#080A06",
     borderWidth: 1,
@@ -8113,97 +8181,317 @@ const styles = StyleSheet.create({
     backgroundColor: "#18210E",
   },
 
-  zMotionFigure: {
-    width: 100,
-    height: 164,
-    alignItems: "center",
-    position: "relative",
+  pushAvatarBody: {
+    position: "absolute",
+    left: 38,
+    right: 34,
+    top: 76,
+    height: 112,
   },
 
-  zMotionFigureHorizontal: {
-    marginTop: 20,
+  pushAvatarHead: {
+    position: "absolute",
+    left: 5,
+    top: 15,
+    width: 32,
+    height: 38,
+    borderRadius: 16,
+    backgroundColor: "#B87855",
+    zIndex: 8,
   },
 
-  zMotionHead: {
-    width: 27,
-    height: 27,
-    borderRadius: 14,
-    borderWidth: 4,
-    borderColor: COLORS.green,
-    backgroundColor: "#080A06",
+  pushAvatarHair: {
+    position: "absolute",
+    left: 2,
+    right: 4,
+    top: 1,
+    height: 11,
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+    borderBottomRightRadius: 8,
+    backgroundColor: "#171717",
+  },
+
+  pushAvatarEar: {
+    position: "absolute",
+    right: -3,
+    top: 16,
+    width: 7,
+    height: 10,
+    borderRadius: 4,
+    backgroundColor: "#A76546",
+  },
+
+  pushAvatarNeck: {
+    position: "absolute",
+    left: 30,
+    top: 34,
+    width: 14,
+    height: 18,
+    borderRadius: 6,
+    backgroundColor: "#B87855",
+    transform: [{ rotate: "88deg" }],
+    zIndex: 5,
+  },
+
+  pushAvatarShirt: {
+    position: "absolute",
+    left: 38,
+    top: 27,
+    width: 102,
+    height: 43,
+    borderRadius: 20,
+    backgroundColor: "#171B12",
+    borderWidth: 2,
+    borderColor: "#344716",
+    transform: [{ rotate: "4deg" }],
     zIndex: 4,
   },
 
-  zMotionTorso: {
-    width: 10,
-    height: 65,
-    borderRadius: 8,
+  pushAvatarShorts: {
+    position: "absolute",
+    left: 131,
+    top: 34,
+    width: 44,
+    height: 36,
+    borderRadius: 12,
     backgroundColor: COLORS.green,
-    marginTop: 4,
+    transform: [{ rotate: "3deg" }],
+    zIndex: 5,
+  },
+
+  pushAvatarUpperArm: {
+    position: "absolute",
+    width: 17,
+    height: 58,
+    borderRadius: 9,
+    backgroundColor: "#B87855",
     zIndex: 3,
   },
 
-  zMotionArm: {
+  pushAvatarUpperArmFront: {
+    left: 60,
+    top: 52,
+  },
+
+  pushAvatarUpperArmBack: {
+    left: 90,
+    top: 55,
+    opacity: 0.82,
+  },
+
+  pushAvatarForearm: {
     position: "absolute",
-    top: 48,
-    width: 8,
-    height: 58,
-    borderRadius: 6,
-    backgroundColor: COLORS.green,
+    width: 15,
+    height: 55,
+    borderRadius: 8,
+    backgroundColor: "#B87855",
+    zIndex: 2,
   },
 
-  zMotionArmLeft: {
-    left: 31,
+  pushAvatarForearmFront: {
+    left: 72,
+    top: 89,
   },
 
-  zMotionArmRight: {
-    right: 31,
-  },
-
-  zMotionLeg: {
-    position: "absolute",
+  pushAvatarForearmBack: {
+    left: 102,
     top: 92,
-    width: 9,
-    height: 66,
-    borderRadius: 6,
-    backgroundColor: COLORS.green,
+    opacity: 0.82,
   },
 
-  zMotionLegLeft: {
-    left: 37,
-    transform: [{ rotate: "12deg" }],
-  },
-
-  zMotionLegRight: {
-    right: 37,
-    transform: [{ rotate: "-12deg" }],
-  },
-
-  zMotionEquipmentBar: {
+  pushAvatarThigh: {
     position: "absolute",
-    top: 38,
-    left: 16,
-    right: 16,
-    height: 6,
-    borderRadius: 4,
+    left: 165,
+    top: 43,
+    width: 68,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#22251D",
+    transform: [{ rotate: "3deg" }],
+  },
+
+  pushAvatarShin: {
+    position: "absolute",
+    left: 222,
+    top: 48,
+    width: 58,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#B87855",
+    transform: [{ rotate: "4deg" }],
+  },
+
+  pushAvatarShoe: {
+    position: "absolute",
+    left: 267,
+    top: 45,
+    width: 31,
+    height: 18,
+    borderRadius: 8,
     backgroundColor: COLORS.white,
-    opacity: 0.9,
+    transform: [{ rotate: "3deg" }],
   },
 
-  zMotionEquipmentWeight: {
+  humanAvatar: {
     position: "absolute",
-    left: -6,
-    top: -8,
-    width: 8,
-    height: 22,
+    top: 27,
+    width: 132,
+    height: 187,
+    alignItems: "center",
+  },
+
+  humanAvatarHead: {
+    width: 36,
+    height: 42,
+    borderRadius: 18,
+    backgroundColor: "#B87855",
+    zIndex: 8,
+  },
+
+  humanAvatarHair: {
+    position: "absolute",
+    left: 2,
+    right: 4,
+    top: 1,
+    height: 12,
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+    borderBottomRightRadius: 7,
+    backgroundColor: "#171717",
+  },
+
+  humanAvatarEar: {
+    position: "absolute",
+    right: -3,
+    top: 18,
+    width: 7,
+    height: 10,
+    borderRadius: 4,
+    backgroundColor: "#A76546",
+  },
+
+  humanAvatarNeck: {
+    width: 15,
+    height: 13,
+    borderRadius: 5,
+    backgroundColor: "#B87855",
+    marginTop: -2,
+    zIndex: 5,
+  },
+
+  humanAvatarShirt: {
+    width: 57,
+    height: 70,
+    borderRadius: 20,
+    backgroundColor: "#171B12",
+    borderWidth: 2,
+    borderColor: "#344716",
+    marginTop: -1,
+    zIndex: 4,
+  },
+
+  humanAvatarShorts: {
+    width: 54,
+    height: 32,
+    borderRadius: 11,
+    backgroundColor: COLORS.green,
+    marginTop: -3,
+    zIndex: 5,
+  },
+
+  humanAvatarArm: {
+    position: "absolute",
+    top: 58,
+    width: 15,
+    height: 78,
+    borderRadius: 8,
+    backgroundColor: "#B87855",
+    zIndex: 3,
+  },
+
+  humanAvatarArmLeft: {
+    left: 24,
+  },
+
+  humanAvatarArmRight: {
+    right: 24,
+  },
+
+  humanAvatarLeg: {
+    position: "absolute",
+    top: 137,
+    width: 18,
+    height: 65,
+    borderRadius: 9,
+    backgroundColor: "#B87855",
+  },
+
+  humanAvatarLegLeft: {
+    left: 44,
+    transform: [{ rotate: "4deg" }],
+  },
+
+  humanAvatarLegRight: {
+    right: 44,
+    transform: [{ rotate: "-4deg" }],
+  },
+
+  humanAvatarShoe: {
+    position: "absolute",
+    top: 191,
+    width: 31,
+    height: 15,
+    borderRadius: 7,
+    backgroundColor: COLORS.white,
+  },
+
+  humanAvatarShoeLeft: {
+    left: 34,
+  },
+
+  humanAvatarShoeRight: {
+    right: 34,
+  },
+
+  humanAvatarEquipment: {
+    position: "absolute",
+    left: 17,
+    right: 17,
+    top: 78,
+    height: 32,
+  },
+
+  humanAvatarEquipmentHandle: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    top: 13,
+    height: 5,
     borderRadius: 3,
+    backgroundColor: COLORS.white,
+  },
+
+  humanAvatarWeightLeft: {
+    position: "absolute",
+    left: 5,
+    top: 5,
+    width: 9,
+    height: 22,
+    borderRadius: 4,
     backgroundColor: COLORS.green,
   },
 
-  zMotionEquipmentWeightRight: {
-    left: undefined,
-    right: -6,
+  humanAvatarWeightRight: {
+    position: "absolute",
+    right: 5,
+    top: 5,
+    width: 9,
+    height: 22,
+    borderRadius: 4,
+    backgroundColor: COLORS.green,
   },
+
 
   zMotionDirection: {
     position: "absolute",
@@ -8219,9 +8507,9 @@ const styles = StyleSheet.create({
 
   zMotionFloor: {
     position: "absolute",
-    left: 22,
-    right: 22,
-    bottom: 18,
+    left: 18,
+    right: 18,
+    bottom: 16,
     height: 2,
     backgroundColor: "#354A18",
   },
