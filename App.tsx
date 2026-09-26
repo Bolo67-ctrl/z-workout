@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type Place = "home" | "gym";
 type Goal =
@@ -84,6 +85,34 @@ type ExerciseLibraryItem = {
 
 type CoachEnergy = "Ready" | "Low Energy" | "Recovery";
 type CoachEquipmentMode = "Use My Plan" | "No Equipment Today";
+
+type PersistedAppData = {
+  workoutPlace: Place | null;
+  goal: Goal | null;
+  equipment: string[];
+  trainingDays: number | null;
+  workoutLength: string | null;
+  completedWorkouts: number;
+  workoutHistory: WorkoutHistoryItem[];
+  weekKey: string;
+  mealCategory: MealCategory;
+  mealTiming: MealTiming;
+  recommendedMealsOnly: boolean;
+};
+
+const STORAGE_KEY = "z-workout-app-state-v1";
+
+const getCurrentWeekKey = () => {
+  const now = new Date();
+  const monday = new Date(now);
+  const day = monday.getDay();
+  const difference = monday.getDate() - day + (day === 0 ? -6 : 1);
+
+  monday.setDate(difference);
+  monday.setHours(0, 0, 0, 0);
+
+  return monday.toISOString().slice(0, 10);
+};
 
 const COLORS = {
   background: "#080808",
@@ -777,6 +806,151 @@ export default function App() {
     useState<WorkoutExercise[] | null>(null);
   const [sessionTitle, setSessionTitle] = useState<string | null>(null);
   const [sessionLength, setSessionLength] = useState<string | null>(null);
+  const [storageReady, setStorageReady] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    const restoreApp = async () => {
+      try {
+        const saved = await AsyncStorage.getItem(STORAGE_KEY);
+
+        if (!saved || !active) {
+          return;
+        }
+
+        const parsed = JSON.parse(saved) as Partial<PersistedAppData>;
+
+        if (parsed.workoutPlace === "home" || parsed.workoutPlace === "gym") {
+          setWorkoutPlace(parsed.workoutPlace);
+        }
+
+        if (
+          parsed.goal === "muscle" ||
+          parsed.goal === "strength" ||
+          parsed.goal === "endurance" ||
+          parsed.goal === "consistency" ||
+          parsed.goal === "mobility"
+        ) {
+          setGoal(parsed.goal);
+        }
+
+        if (Array.isArray(parsed.equipment)) {
+          setEquipment(parsed.equipment);
+        }
+
+        if (typeof parsed.trainingDays === "number") {
+          setTrainingDays(parsed.trainingDays);
+        }
+
+        if (typeof parsed.workoutLength === "string") {
+          setWorkoutLength(parsed.workoutLength);
+        }
+
+        if (Array.isArray(parsed.workoutHistory)) {
+          setWorkoutHistory(parsed.workoutHistory);
+        }
+
+        if (
+          parsed.mealCategory === "All" ||
+          parsed.mealCategory === "Breakfast" ||
+          parsed.mealCategory === "Lunch" ||
+          parsed.mealCategory === "Dinner" ||
+          parsed.mealCategory === "Snack" ||
+          parsed.mealCategory === "Vegetarian" ||
+          parsed.mealCategory === "Quick"
+        ) {
+          setMealCategory(parsed.mealCategory);
+        }
+
+        if (
+          parsed.mealTiming === "Anytime" ||
+          parsed.mealTiming === "Before Workout" ||
+          parsed.mealTiming === "After Workout"
+        ) {
+          setMealTiming(parsed.mealTiming);
+        }
+
+        if (typeof parsed.recommendedMealsOnly === "boolean") {
+          setRecommendedMealsOnly(parsed.recommendedMealsOnly);
+        }
+
+        if (parsed.weekKey === getCurrentWeekKey()) {
+          setCompletedWorkouts(
+            typeof parsed.completedWorkouts === "number"
+              ? parsed.completedWorkouts
+              : 0
+          );
+        } else {
+          setCompletedWorkouts(0);
+        }
+
+        const hasSavedPlan =
+          (parsed.workoutPlace === "home" || parsed.workoutPlace === "gym") &&
+          !!parsed.goal &&
+          Array.isArray(parsed.equipment) &&
+          parsed.equipment.length > 0 &&
+          typeof parsed.trainingDays === "number" &&
+          typeof parsed.workoutLength === "string";
+
+        if (hasSavedPlan) {
+          setStep(5);
+        }
+      } catch {
+        // If saved data is unavailable or invalid, the app starts fresh.
+      } finally {
+        if (active) {
+          setStorageReady(true);
+        }
+      }
+    };
+
+    restoreApp();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!storageReady) return;
+
+    const saveApp = async () => {
+      const data: PersistedAppData = {
+        workoutPlace,
+        goal,
+        equipment,
+        trainingDays,
+        workoutLength,
+        completedWorkouts,
+        workoutHistory,
+        weekKey: getCurrentWeekKey(),
+        mealCategory,
+        mealTiming,
+        recommendedMealsOnly,
+      };
+
+      try {
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch {
+        // Keep the app usable even if local storage is temporarily unavailable.
+      }
+    };
+
+    saveApp();
+  }, [
+    storageReady,
+    workoutPlace,
+    goal,
+    equipment,
+    trainingDays,
+    workoutLength,
+    completedWorkouts,
+    workoutHistory,
+    mealCategory,
+    mealTiming,
+    recommendedMealsOnly,
+  ]);
 
   const toggleEquipment = (item: string) => {
     if (item === "No Equipment") {
@@ -1391,6 +1565,21 @@ export default function App() {
     setSetLogs({});
     setStep(5);
   };
+
+  if (!storageReady) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+        <View style={styles.storageLoading}>
+          <View style={styles.logoCircle}>
+            <Text style={styles.logo}>Z</Text>
+          </View>
+          <Text style={styles.storageLoadingTitle}>Z WORKOUT</Text>
+          <Text style={styles.storageLoadingText}>Loading your plan...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (step === 0) {
     return (
@@ -2764,6 +2953,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+
+  storageLoading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+
+  storageLoadingTitle: {
+    color: COLORS.white,
+    fontSize: 27,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    marginTop: 2,
+  },
+
+  storageLoadingText: {
+    color: COLORS.muted,
+    fontSize: 14,
+    marginTop: 8,
   },
 
   centerContent: {
