@@ -789,6 +789,11 @@ export default function App() {
   const [equipment, setEquipment] = useState<string[]>([]);
   const [trainingDays, setTrainingDays] = useState<number | null>(null);
   const [workoutLength, setWorkoutLength] = useState<string | null>(null);
+  const [editWorkoutPlace, setEditWorkoutPlace] = useState<Place | null>(null);
+  const [editGoal, setEditGoal] = useState<Goal | null>(null);
+  const [editEquipment, setEditEquipment] = useState<string[]>([]);
+  const [editTrainingDays, setEditTrainingDays] = useState<number | null>(null);
+  const [editWorkoutLength, setEditWorkoutLength] = useState<string | null>(null);
   const [completedSets, setCompletedSets] = useState<string[]>([]);
   const [completedWorkouts, setCompletedWorkouts] = useState(0);
   const [setLogs, setSetLogs] = useState<Record<string, SetLog>>({});
@@ -1653,6 +1658,54 @@ export default function App() {
     setStep(6);
   };
 
+  const openEditPlan = () => {
+    setEditWorkoutPlace(workoutPlace);
+    setEditGoal(goal);
+    setEditEquipment([...equipment]);
+    setEditTrainingDays(trainingDays);
+    setEditWorkoutLength(workoutLength);
+    setStep(14);
+  };
+
+  const toggleEditEquipment = (item: string) => {
+    if (item === "No Equipment") {
+      setEditEquipment(["No Equipment"]);
+      return;
+    }
+
+    const withoutNoEquipment = editEquipment.filter(
+      (equipmentItem) => equipmentItem !== "No Equipment"
+    );
+
+    if (withoutNoEquipment.includes(item)) {
+      setEditEquipment(
+        withoutNoEquipment.filter((equipmentItem) => equipmentItem !== item)
+      );
+    } else {
+      setEditEquipment([...withoutNoEquipment, item]);
+    }
+  };
+
+  const saveEditedPlan = () => {
+    if (
+      !editWorkoutPlace ||
+      !editGoal ||
+      editEquipment.length === 0 ||
+      !editTrainingDays ||
+      !editWorkoutLength
+    ) {
+      return;
+    }
+
+    setWorkoutPlace(editWorkoutPlace);
+    setGoal(editGoal);
+    setEquipment(editEquipment);
+    setTrainingDays(editTrainingDays);
+    setWorkoutLength(editWorkoutLength);
+    setCompletedWorkouts((current) => Math.min(current, editTrainingDays));
+    setStep(13);
+  };
+
   const startPlanSession = (session: WorkoutPlanSession) => {
     const firstExercise = session.exercises[0];
 
@@ -2401,6 +2454,13 @@ export default function App() {
             <Text style={styles.workoutPlanOverviewEmoji}>⚡</Text>
           </View>
 
+          <TouchableOpacity
+            style={styles.editPlanButton}
+            onPress={openEditPlan}
+          >
+            <Text style={styles.editPlanButtonText}>EDIT MY PLAN</Text>
+          </TouchableOpacity>
+
           <View style={styles.workoutPlanProgressRow}>
             <Text style={styles.workoutPlanProgressText}>
               {completedWorkouts}/{trainingDays ?? "-"} completed this week
@@ -2469,6 +2529,206 @@ export default function App() {
               Coach when you need a shorter, no-equipment, or recovery option.
             </Text>
           </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (step === 14) {
+    const editPlanReady =
+      !!editWorkoutPlace &&
+      !!editGoal &&
+      editEquipment.length > 0 &&
+      !!editTrainingDays &&
+      !!editWorkoutLength;
+
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+
+        <ScrollView
+          contentContainerStyle={styles.editPlanScreen}
+          showsVerticalScrollIndicator={false}
+        >
+          <TouchableOpacity onPress={() => setStep(13)}>
+            <Text style={styles.workoutBack}>‹ Back to workouts</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.workoutScreenLabel}>EDIT PLAN</Text>
+          <Text style={styles.editPlanTitle}>Change your workout plan</Text>
+          <Text style={styles.editPlanSubtitle}>
+            Update any part of your plan. Your completed workout history stays
+            saved.
+          </Text>
+
+          <Text style={styles.editPlanSectionTitle}>Where do you train?</Text>
+          <View style={styles.editPlanTwoColumn}>
+            <TouchableOpacity
+              style={[
+                styles.editPlanChoiceCard,
+                editWorkoutPlace === "home" && styles.editPlanChoiceCardActive,
+              ]}
+              onPress={() => setEditWorkoutPlace("home")}
+            >
+              <Text style={styles.editPlanChoiceEmoji}>🏠</Text>
+              <Text
+                style={[
+                  styles.editPlanChoiceTitle,
+                  editWorkoutPlace === "home" &&
+                    styles.editPlanChoiceTitleActive,
+                ]}
+              >
+                Home
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.editPlanChoiceCard,
+                editWorkoutPlace === "gym" && styles.editPlanChoiceCardActive,
+              ]}
+              onPress={() => setEditWorkoutPlace("gym")}
+            >
+              <Text style={styles.editPlanChoiceEmoji}>🏋️</Text>
+              <Text
+                style={[
+                  styles.editPlanChoiceTitle,
+                  editWorkoutPlace === "gym" &&
+                    styles.editPlanChoiceTitleActive,
+                ]}
+              >
+                Gym
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.editPlanSectionTitle}>Main workout goal</Text>
+          <View style={styles.editGoalStack}>
+            {(
+              [
+                ["muscle", "💪", "Build Muscle"],
+                ["strength", "🏋️", "Build Strength"],
+                ["endurance", "⚡", "Improve Endurance"],
+                ["consistency", "✓", "Stay Consistent"],
+                ["mobility", "🧘", "Mobility & Flexibility"],
+              ] as [Goal, string, string][]
+            ).map(([value, emoji, label]) => (
+              <TouchableOpacity
+                key={value}
+                style={[
+                  styles.editGoalCard,
+                  editGoal === value && styles.editGoalCardActive,
+                ]}
+                onPress={() => setEditGoal(value)}
+              >
+                <Text style={styles.editGoalEmoji}>{emoji}</Text>
+                <Text
+                  style={[
+                    styles.editGoalText,
+                    editGoal === value && styles.editGoalTextActive,
+                  ]}
+                >
+                  {label}
+                </Text>
+                <Text style={styles.editGoalCheck}>
+                  {editGoal === value ? "✓" : ""}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.editPlanSectionTitle}>Available equipment</Text>
+          <View style={styles.chipContainer}>
+            {EQUIPMENT.map((item) => (
+              <TouchableOpacity
+                key={item}
+                style={[
+                  styles.chip,
+                  editEquipment.includes(item) && styles.selectedChip,
+                ]}
+                onPress={() => toggleEditEquipment(item)}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    editEquipment.includes(item) && styles.selectedChipText,
+                  ]}
+                >
+                  {item}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.editPlanSectionTitle}>Sessions per week</Text>
+          <View style={styles.choiceRow}>
+            {[2, 3, 4, 5, 6].map((day) => (
+              <TouchableOpacity
+                key={day}
+                style={[
+                  styles.numberChoice,
+                  editTrainingDays === day && styles.selectedNumberChoice,
+                ]}
+                onPress={() => setEditTrainingDays(day)}
+              >
+                <Text
+                  style={[
+                    styles.numberChoiceText,
+                    editTrainingDays === day &&
+                      styles.selectedNumberChoiceText,
+                  ]}
+                >
+                  {day}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.editPlanHint}>
+            Rest and recovery days can go between sessions.
+          </Text>
+
+          <Text style={styles.editPlanSectionTitle}>Workout length</Text>
+          <View style={styles.timeGrid}>
+            {["15 min", "30 min", "45 min", "60+ min"].map((time) => (
+              <TouchableOpacity
+                key={time}
+                style={[
+                  styles.timeChoice,
+                  editWorkoutLength === time && styles.selectedTimeChoice,
+                ]}
+                onPress={() => setEditWorkoutLength(time)}
+              >
+                <Text
+                  style={[
+                    styles.timeChoiceText,
+                    editWorkoutLength === time &&
+                      styles.selectedTimeChoiceText,
+                  ]}
+                >
+                  {time}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <TouchableOpacity
+            disabled={!editPlanReady}
+            style={[
+              styles.editPlanSaveButton,
+              !editPlanReady && styles.disabledButton,
+            ]}
+            onPress={saveEditedPlan}
+          >
+            <Text style={styles.editPlanSaveButtonText}>SAVE NEW PLAN</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.editPlanCancelButton}
+            onPress={() => setStep(13)}
+          >
+            <Text style={styles.editPlanCancelText}>CANCEL</Text>
+          </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
     );
@@ -3461,6 +3721,13 @@ export default function App() {
               </View>
 
               <TouchableOpacity
+                style={styles.profilePrimaryButton}
+                onPress={openEditPlan}
+              >
+                <Text style={styles.profilePrimaryButtonText}>EDIT WORKOUT PLAN</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 style={styles.profileSecondaryButton}
                 onPress={signOut}
                 disabled={authLoading}
@@ -4096,6 +4363,150 @@ const styles = StyleSheet.create({
     color: COLORS.background,
   },
 
+  editPlanScreen: {
+    padding: 22,
+    paddingTop: 34,
+    paddingBottom: 60,
+  },
+
+  editPlanTitle: {
+    color: COLORS.white,
+    fontSize: 31,
+    lineHeight: 37,
+    fontWeight: "900",
+    marginTop: 7,
+  },
+
+  editPlanSubtitle: {
+    color: COLORS.muted,
+    lineHeight: 21,
+    marginTop: 9,
+    marginBottom: 24,
+  },
+
+  editPlanSectionTitle: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "900",
+    marginTop: 18,
+    marginBottom: 12,
+  },
+
+  editPlanTwoColumn: {
+    flexDirection: "row",
+    gap: 10,
+  },
+
+  editPlanChoiceCard: {
+    flex: 1,
+    minHeight: 100,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  editPlanChoiceCardActive: {
+    borderColor: COLORS.green,
+    backgroundColor: "#151A0D",
+  },
+
+  editPlanChoiceEmoji: {
+    fontSize: 29,
+    marginBottom: 8,
+  },
+
+  editPlanChoiceTitle: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+
+  editPlanChoiceTitleActive: {
+    color: COLORS.green,
+  },
+
+  editGoalStack: {
+    gap: 9,
+  },
+
+  editGoalCard: {
+    minHeight: 58,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 15,
+  },
+
+  editGoalCardActive: {
+    borderColor: COLORS.green,
+    backgroundColor: "#151A0D",
+  },
+
+  editGoalEmoji: {
+    width: 36,
+    fontSize: 21,
+  },
+
+  editGoalText: {
+    flex: 1,
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+
+  editGoalTextActive: {
+    color: COLORS.green,
+  },
+
+  editGoalCheck: {
+    color: COLORS.green,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+
+  editPlanHint: {
+    color: COLORS.muted,
+    fontSize: 12,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+
+  editPlanSaveButton: {
+    minHeight: 56,
+    borderRadius: 17,
+    backgroundColor: COLORS.green,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 24,
+  },
+
+  editPlanSaveButtonText: {
+    color: COLORS.background,
+    fontWeight: "900",
+    fontSize: 14,
+    letterSpacing: 0.7,
+  },
+
+  editPlanCancelButton: {
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+  },
+
+  editPlanCancelText: {
+    color: COLORS.muted,
+    fontWeight: "800",
+    fontSize: 12,
+    letterSpacing: 0.6,
+  },
+
   workoutPlanScreen: {
     padding: 22,
     paddingTop: 34,
@@ -4155,6 +4566,23 @@ const styles = StyleSheet.create({
   workoutPlanOverviewEmoji: {
     fontSize: 28,
     marginLeft: 12,
+  },
+
+  editPlanButton: {
+    minHeight: 46,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: COLORS.green,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+
+  editPlanButtonText: {
+    color: COLORS.green,
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 0.6,
   },
 
   workoutPlanProgressRow: {
