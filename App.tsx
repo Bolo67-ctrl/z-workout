@@ -30,6 +30,24 @@ type SetLog = {
   weight: string;
 };
 
+type MealCategory =
+  | "All"
+  | "Breakfast"
+  | "Lunch"
+  | "Dinner"
+  | "Snack"
+  | "Vegetarian"
+  | "Quick";
+
+type MealRecipe = {
+  title: string;
+  emoji: string;
+  category: Exclude<MealCategory, "All">;
+  time: string;
+  ingredients: string[];
+  steps: string[];
+};
+
 const COLORS = {
   background: "#080808",
   card: "#111111",
@@ -53,6 +71,81 @@ const EQUIPMENT = [
   "Kettlebell",
 ];
 
+const MEALS: MealRecipe[] = [
+  {
+    title: "Egg & Avocado Toast",
+    emoji: "🥑",
+    category: "Breakfast",
+    time: "10 min",
+    ingredients: ["eggs", "whole-grain toast", "avocado", "tomato"],
+    steps: [
+      "Toast the bread.",
+      "Cook the eggs the way you like.",
+      "Add avocado and tomato, then place the eggs on top.",
+    ],
+  },
+  {
+    title: "Chicken Rice Bowl",
+    emoji: "🍚",
+    category: "Lunch",
+    time: "20 min",
+    ingredients: ["chicken", "rice", "mixed vegetables", "olive oil"],
+    steps: [
+      "Cook or warm the rice.",
+      "Cook the chicken fully and slice it.",
+      "Add vegetables and combine everything in a bowl.",
+    ],
+  },
+  {
+    title: "Salmon, Potato & Greens",
+    emoji: "🐟",
+    category: "Dinner",
+    time: "30 min",
+    ingredients: ["salmon", "potatoes", "green vegetables", "olive oil"],
+    steps: [
+      "Roast or air-fry the potatoes.",
+      "Cook the salmon until fully done.",
+      "Serve with green vegetables.",
+    ],
+  },
+  {
+    title: "Greek Yogurt Fruit Bowl",
+    emoji: "🫐",
+    category: "Snack",
+    time: "5 min",
+    ingredients: ["Greek yogurt", "berries", "banana", "oats or granola"],
+    steps: [
+      "Add yogurt to a bowl.",
+      "Top with fruit.",
+      "Add oats or granola for crunch.",
+    ],
+  },
+  {
+    title: "Bean & Cheese Quesadilla",
+    emoji: "🌯",
+    category: "Vegetarian",
+    time: "12 min",
+    ingredients: ["tortilla", "beans", "cheese", "tomato", "lettuce"],
+    steps: [
+      "Add beans and cheese to the tortilla.",
+      "Warm it in a pan until the cheese melts.",
+      "Serve with tomato and lettuce.",
+    ],
+  },
+  {
+    title: "Peanut Butter Banana Wrap",
+    emoji: "🍌",
+    category: "Quick",
+    time: "5 min",
+    ingredients: ["tortilla", "peanut butter", "banana"],
+    steps: [
+      "Spread peanut butter on the tortilla.",
+      "Add the banana.",
+      "Roll it up and slice if you want.",
+    ],
+  },
+];
+
 export default function App() {
   const [step, setStep] = useState(0);
   const [workoutPlace, setWorkoutPlace] = useState<Place | null>(null);
@@ -69,6 +162,8 @@ export default function App() {
   const [timerPhase, setTimerPhase] = useState<"work" | "rest">("work");
   const [timeLeft, setTimeLeft] = useState(300);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [mealCategory, setMealCategory] = useState<MealCategory>("All");
+  const [mealSearch, setMealSearch] = useState("");
 
   const toggleEquipment = (item: string) => {
     if (item === "No Equipment") {
@@ -410,6 +505,24 @@ export default function App() {
     currentExerciseIndex,
     currentSetIndex,
   ]);
+
+  const filteredMeals = useMemo(() => {
+    const query = mealSearch.trim().toLowerCase();
+
+    return MEALS.filter((meal) => {
+      const categoryMatch =
+        mealCategory === "All" || meal.category === mealCategory;
+
+      const searchMatch =
+        !query ||
+        meal.title.toLowerCase().includes(query) ||
+        meal.ingredients.some((ingredient) =>
+          ingredient.toLowerCase().includes(query)
+        );
+
+      return categoryMatch && searchMatch;
+    });
+  }, [mealCategory, mealSearch]);
 
   const finishWorkout = () => {
     if (completedSets.length > 0) {
@@ -907,6 +1020,121 @@ export default function App() {
     );
   }
 
+  if (step === 7) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+
+        <ScrollView
+          contentContainerStyle={styles.mealsScreen}
+          showsVerticalScrollIndicator={false}
+        >
+          <TouchableOpacity onPress={() => setStep(5)}>
+            <Text style={styles.workoutBack}>‹ Back home</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.workoutScreenLabel}>Z MEALS</Text>
+          <Text style={styles.mealsTitle}>Simple meal ideas</Text>
+          <Text style={styles.mealsSubtitle}>
+            Balanced ideas for energy, recovery, and variety. Pick what sounds good
+            and works with what you have.
+          </Text>
+
+          <TextInput
+            value={mealSearch}
+            onChangeText={setMealSearch}
+            placeholder="Search chicken, rice, eggs..."
+            placeholderTextColor="#5D5D5D"
+            style={styles.mealSearch}
+          />
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.mealCategoryRow}
+          >
+            {(
+              [
+                "All",
+                "Breakfast",
+                "Lunch",
+                "Dinner",
+                "Snack",
+                "Vegetarian",
+                "Quick",
+              ] as MealCategory[]
+            ).map((category) => (
+              <TouchableOpacity
+                key={category}
+                style={[
+                  styles.mealCategoryChip,
+                  mealCategory === category && styles.mealCategoryChipActive,
+                ]}
+                onPress={() => setMealCategory(category)}
+              >
+                <Text
+                  style={[
+                    styles.mealCategoryText,
+                    mealCategory === category && styles.mealCategoryTextActive,
+                  ]}
+                >
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {filteredMeals.length === 0 ? (
+            <View style={styles.mealEmptyCard}>
+              <Text style={styles.mealEmptyTitle}>No matches yet</Text>
+              <Text style={styles.mealEmptyText}>
+                Try another ingredient or choose All.
+              </Text>
+            </View>
+          ) : (
+            filteredMeals.map((meal) => (
+              <View key={meal.title} style={styles.mealCard}>
+                <View style={styles.mealCardHeader}>
+                  <Text style={styles.mealEmoji}>{meal.emoji}</Text>
+                  <View style={styles.mealCardTitleWrap}>
+                    <Text style={styles.mealCardTitle}>{meal.title}</Text>
+                    <Text style={styles.mealMeta}>
+                      {meal.category} • {meal.time}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={styles.mealSectionLabel}>INGREDIENTS</Text>
+                <Text style={styles.mealIngredients}>
+                  {meal.ingredients.join(" • ")}
+                </Text>
+
+                <Text style={styles.mealSectionLabel}>MAKE IT</Text>
+                {meal.steps.map((item, index) => (
+                  <View key={`${meal.title}-${index}`} style={styles.mealStepRow}>
+                    <View style={styles.mealStepNumber}>
+                      <Text style={styles.mealStepNumberText}>{index + 1}</Text>
+                    </View>
+                    <Text style={styles.mealStepText}>{item}</Text>
+                  </View>
+                ))}
+              </View>
+            ))
+          )}
+
+          <View style={styles.mealNote}>
+            <Text style={styles.mealNoteTitle}>Food should support your day</Text>
+            <Text style={styles.mealNoteText}>
+              Z Meals focuses on balanced choices and variety instead of strict
+              dieting or skipping meals.
+            </Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
@@ -997,6 +1225,7 @@ export default function App() {
             emoji="🥗"
             title="Meals"
             subtitle="Recipe ideas"
+            onPress={() => setStep(7)}
           />
 
           <DashboardCard
@@ -1081,13 +1310,15 @@ function DashboardCard({
   emoji,
   title,
   subtitle,
+  onPress,
 }: {
   emoji: string;
   title: string;
   subtitle: string;
+  onPress?: () => void;
 }) {
   return (
-    <TouchableOpacity style={styles.dashboardCard}>
+    <TouchableOpacity style={styles.dashboardCard} onPress={onPress}>
       <Text style={styles.dashboardEmoji}>{emoji}</Text>
       <Text style={styles.dashboardCardTitle}>{title}</Text>
       <Text style={styles.dashboardCardSubtitle}>{subtitle}</Text>
@@ -1851,6 +2082,187 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: "center",
     marginTop: 12,
+  },
+
+  mealsScreen: {
+    padding: 22,
+    paddingTop: 34,
+    paddingBottom: 60,
+  },
+
+  mealsTitle: {
+    color: COLORS.white,
+    fontSize: 31,
+    lineHeight: 37,
+    fontWeight: "900",
+    marginTop: 7,
+  },
+
+  mealsSubtitle: {
+    color: COLORS.muted,
+    lineHeight: 21,
+    marginTop: 9,
+    marginBottom: 20,
+  },
+
+  mealSearch: {
+    backgroundColor: COLORS.card,
+    color: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    marginBottom: 15,
+  },
+
+  mealCategoryRow: {
+    gap: 9,
+    paddingBottom: 20,
+  },
+
+  mealCategoryChip: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    borderRadius: 30,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+  },
+
+  mealCategoryChipActive: {
+    backgroundColor: COLORS.green,
+    borderColor: COLORS.green,
+  },
+
+  mealCategoryText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+
+  mealCategoryTextActive: {
+    color: COLORS.background,
+  },
+
+  mealCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 15,
+  },
+
+  mealCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 17,
+  },
+
+  mealEmoji: {
+    fontSize: 34,
+    marginRight: 13,
+  },
+
+  mealCardTitleWrap: {
+    flex: 1,
+  },
+
+  mealCardTitle: {
+    color: COLORS.white,
+    fontSize: 20,
+    fontWeight: "900",
+  },
+
+  mealMeta: {
+    color: COLORS.muted,
+    fontSize: 13,
+    marginTop: 3,
+  },
+
+  mealSectionLabel: {
+    color: COLORS.green,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1,
+    marginTop: 8,
+    marginBottom: 7,
+  },
+
+  mealIngredients: {
+    color: COLORS.white,
+    lineHeight: 21,
+    marginBottom: 8,
+  },
+
+  mealStepRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 10,
+  },
+
+  mealStepNumber: {
+    width: 26,
+    height: 26,
+    borderRadius: 9,
+    backgroundColor: COLORS.cardSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+
+  mealStepNumberText: {
+    color: COLORS.green,
+    fontWeight: "900",
+    fontSize: 12,
+  },
+
+  mealStepText: {
+    flex: 1,
+    color: COLORS.muted,
+    lineHeight: 20,
+  },
+
+  mealEmptyCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 18,
+  },
+
+  mealEmptyTitle: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+
+  mealEmptyText: {
+    color: COLORS.muted,
+    marginTop: 5,
+  },
+
+  mealNote: {
+    backgroundColor: "#10160C",
+    borderWidth: 1,
+    borderColor: "#2E4516",
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 5,
+  },
+
+  mealNoteTitle: {
+    color: COLORS.green,
+    fontWeight: "900",
+    marginBottom: 5,
+  },
+
+  mealNoteText: {
+    color: COLORS.muted,
+    lineHeight: 20,
   },
 
   dashboard: {
