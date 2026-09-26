@@ -54,7 +54,7 @@ export default function App() {
   const [equipment, setEquipment] = useState<string[]>([]);
   const [trainingDays, setTrainingDays] = useState<number | null>(null);
   const [workoutLength, setWorkoutLength] = useState<string | null>(null);
-  const [completedExercises, setCompletedExercises] = useState<number[]>([]);
+  const [completedSets, setCompletedSets] = useState<string[]>([]);
   const [completedWorkouts, setCompletedWorkouts] = useState(0);
 
   const toggleEquipment = (item: string) => {
@@ -183,22 +183,41 @@ export default function App() {
     return exercises.slice(0, maxExercises);
   }, [goal, equipment, workoutPlace, workoutLength]);
 
-  const toggleExerciseComplete = (index: number) => {
-    setCompletedExercises((current) =>
-      current.includes(index)
-        ? current.filter((item) => item !== index)
-        : [...current, index]
+  const getSetCount = (target: string) => {
+    const match = target.match(/^(\d+)/);
+    return match ? Math.max(1, Number(match[1])) : 1;
+  };
+
+  const getSetTarget = (target: string) => {
+    if (target.includes("×")) {
+      return target.split("×").slice(1).join("×").trim();
+    }
+
+    if (target.toLowerCase().includes("round")) {
+      return "1 round";
+    }
+
+    return target;
+  };
+
+  const toggleSetComplete = (exerciseIndex: number, setIndex: number) => {
+    const key = `${exerciseIndex}-${setIndex}`;
+
+    setCompletedSets((current) =>
+      current.includes(key)
+        ? current.filter((item) => item !== key)
+        : [...current, key]
     );
   };
 
   const finishWorkout = () => {
-    if (completedExercises.length > 0) {
+    if (completedSets.length > 0) {
       setCompletedWorkouts((current) =>
         Math.min(current + 1, trainingDays ?? current + 1)
       );
     }
 
-    setCompletedExercises([]);
+    setCompletedSets([]);
     setStep(5);
   };
 
@@ -506,7 +525,18 @@ export default function App() {
   }
 
   if (step === 6) {
-    const completedCount = completedExercises.length;
+    const completedExerciseCount = workoutExercises.filter((exercise, exerciseIndex) => {
+      const setCount = getSetCount(exercise.target);
+
+      return Array.from({ length: setCount }).every((_, setIndex) =>
+        completedSets.includes(`${exerciseIndex}-${setIndex}`)
+      );
+    }).length;
+
+    const totalSets = workoutExercises.reduce(
+      (sum, exercise) => sum + getSetCount(exercise.target),
+      0
+    );
 
     return (
       <SafeAreaView style={styles.container}>
@@ -524,7 +554,7 @@ export default function App() {
           <Text style={styles.workoutScreenTitle}>{todayWorkout}</Text>
 
           <Text style={styles.workoutScreenMeta}>
-            {workoutLength} • {workoutExercises.length} exercises • {completedCount} completed
+            {workoutLength} • {workoutExercises.length} exercises • {completedSets.length}/{totalSets} sets
           </Text>
 
           <View style={styles.safetyNote}>
@@ -534,17 +564,23 @@ export default function App() {
             </Text>
           </View>
 
-          {workoutExercises.map((exercise, index) => {
-            const done = completedExercises.includes(index);
+          {workoutExercises.map((exercise, exerciseIndex) => {
+            const setCount = getSetCount(exercise.target);
+            const setTarget = getSetTarget(exercise.target);
+            const done = Array.from({ length: setCount }).every((_, setIndex) =>
+              completedSets.includes(`${exerciseIndex}-${setIndex}`)
+            );
 
             return (
               <View
-                key={`${exercise.name}-${index}`}
+                key={`${exercise.name}-${exerciseIndex}`}
                 style={[styles.exerciseCard, done && styles.exerciseCardDone]}
               >
                 <View style={styles.exerciseHeader}>
                   <View style={styles.exerciseNumber}>
-                    <Text style={styles.exerciseNumberText}>{index + 1}</Text>
+                    <Text style={styles.exerciseNumberText}>
+                      {exerciseIndex + 1}
+                    </Text>
                   </View>
 
                   <View style={styles.exerciseTitleWrap}>
@@ -558,26 +594,57 @@ export default function App() {
                 <Text style={styles.exerciseTarget}>{exercise.target}</Text>
                 <Text style={styles.exerciseCue}>{exercise.cue}</Text>
 
-                <TouchableOpacity
-                  style={[styles.completeSetButton, done && styles.undoButton]}
-                  onPress={() => toggleExerciseComplete(index)}
-                >
-                  <Text
-                    style={[
-                      styles.completeSetButtonText,
-                      done && styles.undoButtonText,
-                    ]}
-                  >
-                    {done ? "MARK INCOMPLETE" : "MARK COMPLETE"}
-                  </Text>
-                </TouchableOpacity>
+                <View style={styles.setList}>
+                  {Array.from({ length: setCount }).map((_, setIndex) => {
+                    const key = `${exerciseIndex}-${setIndex}`;
+                    const setDone = completedSets.includes(key);
+
+                    return (
+                      <TouchableOpacity
+                        key={key}
+                        style={[styles.setRow, setDone && styles.setRowDone]}
+                        onPress={() =>
+                          toggleSetComplete(exerciseIndex, setIndex)
+                        }
+                      >
+                        <View style={styles.setInfo}>
+                          <Text
+                            style={[
+                              styles.setLabel,
+                              setDone && styles.setLabelDone,
+                            ]}
+                          >
+                            SET {setIndex + 1}
+                          </Text>
+                          <Text style={styles.setTarget}>{setTarget}</Text>
+                        </View>
+
+                        <View
+                          style={[
+                            styles.setCheck,
+                            setDone && styles.setCheckDone,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.setCheckText,
+                              setDone && styles.setCheckTextDone,
+                            ]}
+                          >
+                            {setDone ? "✓" : ""}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
             );
           })}
 
           <TouchableOpacity style={styles.finishWorkoutButton} onPress={finishWorkout}>
             <Text style={styles.finishWorkoutButtonText}>
-              {completedCount === workoutExercises.length
+              {completedExerciseCount === workoutExercises.length
                 ? "FINISH WORKOUT ✓"
                 : "FINISH FOR TODAY"}
             </Text>
@@ -636,7 +703,7 @@ export default function App() {
           <TouchableOpacity
             style={styles.startButton}
             onPress={() => {
-              setCompletedExercises([]);
+              setCompletedSets([]);
               setStep(6);
             }}
           >
@@ -1203,29 +1270,73 @@ const styles = StyleSheet.create({
     marginTop: 7,
   },
 
-  completeSetButton: {
-    backgroundColor: COLORS.green,
-    borderRadius: 14,
-    paddingVertical: 13,
-    alignItems: "center",
+  setList: {
     marginTop: 16,
+    gap: 9,
   },
 
-  completeSetButtonText: {
-    color: COLORS.background,
-    fontWeight: "900",
-    fontSize: 12,
-    letterSpacing: 0.6,
-  },
-
-  undoButton: {
+  setRow: {
+    minHeight: 56,
+    borderRadius: 15,
     backgroundColor: COLORS.cardSoft,
     borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  setRowDone: {
+    borderColor: COLORS.green,
+    backgroundColor: "#151A0D",
+  },
+
+  setInfo: {
+    flex: 1,
+  },
+
+  setLabel: {
+    color: COLORS.white,
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 0.7,
+  },
+
+  setLabelDone: {
+    color: COLORS.green,
+  },
+
+  setTarget: {
+    color: COLORS.muted,
+    fontSize: 13,
+    marginTop: 3,
+  },
+
+  setCheck: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 12,
+  },
+
+  setCheckDone: {
+    backgroundColor: COLORS.green,
     borderColor: COLORS.green,
   },
 
-  undoButtonText: {
-    color: COLORS.green,
+  setCheckText: {
+    color: COLORS.muted,
+    fontWeight: "900",
+  },
+
+  setCheckTextDone: {
+    color: COLORS.background,
   },
 
   finishWorkoutButton: {
