@@ -27,8 +27,11 @@ type WorkoutExercise = {
   cue: string;
 };
 
+type Weekday = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
+
 type WorkoutPlanSession = {
   id: string;
+  day: Weekday | null;
   title: string;
   focus: string;
   emoji: string;
@@ -100,6 +103,7 @@ type PersistedAppData = {
   goal: Goal | null;
   equipment: string[];
   trainingDays: number | null;
+  workoutDays: Weekday[];
   workoutLength: string | null;
   completedWorkouts: number;
   workoutHistory: WorkoutHistoryItem[];
@@ -110,6 +114,26 @@ type PersistedAppData = {
 };
 
 const STORAGE_KEY = "z-workout-app-state-v1";
+
+const WEEKDAYS: Weekday[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+const getDefaultWorkoutDays = (count: number): Weekday[] => {
+  if (count === 2) return ["Tue", "Fri"];
+  if (count === 3) return ["Mon", "Wed", "Fri"];
+  if (count === 4) return ["Mon", "Tue", "Thu", "Sat"];
+  if (count === 5) return ["Mon", "Tue", "Wed", "Fri", "Sat"];
+  if (count === 6) return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  return ["Mon", "Wed", "Fri"];
+};
+
+const sortWorkoutDays = (days: Weekday[]) =>
+  [...days].sort((a, b) => WEEKDAYS.indexOf(a) - WEEKDAYS.indexOf(b));
+
+const getTodayWeekday = (): Weekday => {
+  const map: Weekday[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  return map[new Date().getDay()];
+};
 
 const getCurrentWeekKey = () => {
   const now = new Date();
@@ -788,11 +812,13 @@ export default function App() {
   const [goal, setGoal] = useState<Goal | null>(null);
   const [equipment, setEquipment] = useState<string[]>([]);
   const [trainingDays, setTrainingDays] = useState<number | null>(null);
+  const [workoutDays, setWorkoutDays] = useState<Weekday[]>([]);
   const [workoutLength, setWorkoutLength] = useState<string | null>(null);
   const [editWorkoutPlace, setEditWorkoutPlace] = useState<Place | null>(null);
   const [editGoal, setEditGoal] = useState<Goal | null>(null);
   const [editEquipment, setEditEquipment] = useState<string[]>([]);
   const [editTrainingDays, setEditTrainingDays] = useState<number | null>(null);
+  const [editWorkoutDays, setEditWorkoutDays] = useState<Weekday[]>([]);
   const [editWorkoutLength, setEditWorkoutLength] = useState<string | null>(null);
   const [completedSets, setCompletedSets] = useState<string[]>([]);
   const [completedWorkouts, setCompletedWorkouts] = useState(0);
@@ -843,6 +869,7 @@ export default function App() {
     goal,
     equipment,
     trainingDays,
+    workoutDays,
     workoutLength,
     completedWorkouts,
     workoutHistory,
@@ -873,6 +900,18 @@ export default function App() {
 
     if (typeof parsed.trainingDays === "number") {
       setTrainingDays(parsed.trainingDays);
+
+      const savedDays = Array.isArray(parsed.workoutDays)
+        ? parsed.workoutDays.filter((day): day is Weekday =>
+            WEEKDAYS.includes(day as Weekday)
+          )
+        : [];
+
+      setWorkoutDays(
+        savedDays.length === parsed.trainingDays
+          ? sortWorkoutDays(savedDays)
+          : getDefaultWorkoutDays(parsed.trainingDays)
+      );
     }
 
     if (typeof parsed.workoutLength === "string") {
@@ -979,6 +1018,7 @@ export default function App() {
     goal,
     equipment,
     trainingDays,
+    workoutDays,
     workoutLength,
     completedWorkouts,
     workoutHistory,
@@ -1104,6 +1144,7 @@ export default function App() {
     goal,
     equipment,
     trainingDays,
+    workoutDays,
     workoutLength,
     completedWorkouts,
     workoutHistory,
@@ -1200,6 +1241,22 @@ export default function App() {
     } else {
       setEquipment([...withoutNoEquipment, item]);
     }
+  };
+
+  const toggleWorkoutDay = (day: Weekday) => {
+    if (!trainingDays) return;
+
+    setWorkoutDays((current) => {
+      if (current.includes(day)) {
+        return current.filter((item) => item !== day);
+      }
+
+      if (current.length >= trainingDays) {
+        return current;
+      }
+
+      return sortWorkoutDays([...current, day]);
+    });
   };
 
   const todayWorkout = useMemo(() => {
@@ -1524,6 +1581,7 @@ export default function App() {
 
       return {
         id: `session-${index + 1}`,
+        day: workoutDays[index] ?? null,
         title: template.title,
         focus: template.focus,
         emoji: template.emoji,
@@ -1536,8 +1594,13 @@ export default function App() {
     workoutPlace,
     workoutLength,
     trainingDays,
+    workoutDays,
     workoutExercises,
   ]);
+
+  const todayWeekday = getTodayWeekday();
+  const todayPlanSession =
+    weeklySessions.find((session) => session.day === todayWeekday) ?? null;
 
   const activeExercises = sessionExercises ?? workoutExercises;
   const activeWorkoutTitle = sessionTitle ?? todayWorkout;
@@ -1663,6 +1726,11 @@ export default function App() {
     setEditGoal(goal);
     setEditEquipment([...equipment]);
     setEditTrainingDays(trainingDays);
+    setEditWorkoutDays(
+      workoutDays.length === trainingDays
+        ? [...workoutDays]
+        : getDefaultWorkoutDays(trainingDays ?? 3)
+    );
     setEditWorkoutLength(workoutLength);
     setStep(14);
   };
@@ -1686,12 +1754,29 @@ export default function App() {
     }
   };
 
+  const toggleEditWorkoutDay = (day: Weekday) => {
+    if (!editTrainingDays) return;
+
+    setEditWorkoutDays((current) => {
+      if (current.includes(day)) {
+        return current.filter((item) => item !== day);
+      }
+
+      if (current.length >= editTrainingDays) {
+        return current;
+      }
+
+      return sortWorkoutDays([...current, day]);
+    });
+  };
+
   const saveEditedPlan = () => {
     if (
       !editWorkoutPlace ||
       !editGoal ||
       editEquipment.length === 0 ||
       !editTrainingDays ||
+      editWorkoutDays.length !== editTrainingDays ||
       !editWorkoutLength
     ) {
       return;
@@ -1701,6 +1786,7 @@ export default function App() {
     setGoal(editGoal);
     setEquipment(editEquipment);
     setTrainingDays(editTrainingDays);
+    setWorkoutDays(sortWorkoutDays(editWorkoutDays));
     setWorkoutLength(editWorkoutLength);
     setCompletedWorkouts((current) => Math.min(current, editTrainingDays));
     setStep(13);
@@ -2364,7 +2450,10 @@ export default function App() {
                   styles.numberChoice,
                   trainingDays === day && styles.selectedNumberChoice,
                 ]}
-                onPress={() => setTrainingDays(day)}
+                onPress={() => {
+                  setTrainingDays(day);
+                  setWorkoutDays(getDefaultWorkoutDays(day));
+                }}
               >
                 <Text
                   style={[
@@ -2380,6 +2469,34 @@ export default function App() {
 
           <Text style={styles.scheduleHint}>
             Rest and recovery days are part of your plan too.
+          </Text>
+
+          <Text style={styles.sectionQuestion}>Which days work best?</Text>
+          <View style={styles.weekdayRow}>
+            {WEEKDAYS.map((day) => (
+              <TouchableOpacity
+                key={day}
+                style={[
+                  styles.weekdayChoice,
+                  workoutDays.includes(day) && styles.weekdayChoiceActive,
+                ]}
+                onPress={() => toggleWorkoutDay(day)}
+              >
+                <Text
+                  style={[
+                    styles.weekdayChoiceText,
+                    workoutDays.includes(day) && styles.weekdayChoiceTextActive,
+                  ]}
+                >
+                  {day}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.weekdayHint}>
+            Pick {trainingDays ?? "-"} day{trainingDays === 1 ? "" : "s"}.
+            You can change them later.
           </Text>
 
           <Text style={styles.sectionQuestion}>
@@ -2409,10 +2526,17 @@ export default function App() {
           </View>
 
           <TouchableOpacity
-            disabled={!trainingDays || !workoutLength}
+            disabled={
+              !trainingDays ||
+              workoutDays.length !== trainingDays ||
+              !workoutLength
+            }
             style={[
               styles.primaryButton,
-              (!trainingDays || !workoutLength) && styles.disabledButton,
+              (!trainingDays ||
+                workoutDays.length !== trainingDays ||
+                !workoutLength) &&
+                styles.disabledButton,
             ]}
             onPress={() => setStep(5)}
           >
@@ -2441,7 +2565,8 @@ export default function App() {
           <Text style={styles.workoutScreenLabel}>YOUR WORKOUTS</Text>
           <Text style={styles.workoutPlanTitle}>Your weekly plan</Text>
           <Text style={styles.workoutPlanSubtitle}>
-            {trainingDays ?? "-"} planned sessions • {workoutLength ?? "-"} each.
+            {trainingDays ?? "-"} planned sessions • {workoutLength ?? "-"} each
+            {workoutDays.length ? ` • ${workoutDays.join(", ")}` : ""}.
             Pick a session when you are ready. Rest days can go between them.
           </Text>
 
@@ -2489,7 +2614,9 @@ export default function App() {
                 </View>
 
                 <View style={styles.workoutPlanCardTitleWrap}>
-                  <Text style={styles.workoutPlanDay}>SESSION {index + 1}</Text>
+                  <Text style={styles.workoutPlanDay}>
+                    {session.day ?? `SESSION ${index + 1}`}
+                  </Text>
                   <Text style={styles.workoutPlanCardTitle}>{session.title}</Text>
                   <Text style={styles.workoutPlanCardMeta}>
                     {session.focus} • {session.exercises.length} exercises
@@ -2540,6 +2667,7 @@ export default function App() {
       !!editGoal &&
       editEquipment.length > 0 &&
       !!editTrainingDays &&
+      editWorkoutDays.length === editTrainingDays &&
       !!editWorkoutLength;
 
     return (
@@ -2669,7 +2797,10 @@ export default function App() {
                   styles.numberChoice,
                   editTrainingDays === day && styles.selectedNumberChoice,
                 ]}
-                onPress={() => setEditTrainingDays(day)}
+                onPress={() => {
+                  setEditTrainingDays(day);
+                  setEditWorkoutDays(getDefaultWorkoutDays(day));
+                }}
               >
                 <Text
                   style={[
@@ -2686,6 +2817,35 @@ export default function App() {
 
           <Text style={styles.editPlanHint}>
             Rest and recovery days can go between sessions.
+          </Text>
+
+          <Text style={styles.editPlanSectionTitle}>Workout days</Text>
+          <View style={styles.weekdayRow}>
+            {WEEKDAYS.map((day) => (
+              <TouchableOpacity
+                key={day}
+                style={[
+                  styles.weekdayChoice,
+                  editWorkoutDays.includes(day) && styles.weekdayChoiceActive,
+                ]}
+                onPress={() => toggleEditWorkoutDay(day)}
+              >
+                <Text
+                  style={[
+                    styles.weekdayChoiceText,
+                    editWorkoutDays.includes(day) &&
+                      styles.weekdayChoiceTextActive,
+                  ]}
+                >
+                  {day}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.weekdayHint}>
+            Select exactly {editTrainingDays ?? "-"} day
+            {editTrainingDays === 1 ? "" : "s"}.
           </Text>
 
           <Text style={styles.editPlanSectionTitle}>Workout length</Text>
@@ -3865,8 +4025,12 @@ export default function App() {
         <View style={styles.todayCard}>
           <View style={styles.todayTopRow}>
             <View style={styles.todayTextWrap}>
-              <Text style={styles.todayLabel}>TODAY'S WORKOUT</Text>
-              <Text style={styles.todayTitle}>{todayWorkout}</Text>
+              <Text style={styles.todayLabel}>
+                {todayPlanSession ? `${todayWeekday} • TODAY'S WORKOUT` : `${todayWeekday} • FLEXIBLE DAY`}
+              </Text>
+              <Text style={styles.todayTitle}>
+                {todayPlanSession ? todayPlanSession.title : "No planned session today"}
+              </Text>
             </View>
 
             <Text style={styles.workoutEmoji}>⚡</Text>
@@ -3876,15 +4040,23 @@ export default function App() {
             <Text style={styles.detailText}>⏱ {workoutLength}</Text>
             <Text style={styles.detailText}>•</Text>
             <Text style={styles.detailText}>
-              {trainingDays} days/week plan
+              {todayPlanSession
+                ? todayPlanSession.focus
+                : "Rest, recover, or choose another session"}
             </Text>
           </View>
 
           <TouchableOpacity
             style={styles.startButton}
-            onPress={startTimedWorkout}
+            onPress={() =>
+              todayPlanSession
+                ? startPlanSession(todayPlanSession)
+                : setStep(13)
+            }
           >
-            <Text style={styles.startButtonText}>START WORKOUT</Text>
+            <Text style={styles.startButtonText}>
+              {todayPlanSession ? "START TODAY'S SESSION" : "VIEW WEEKLY PLAN"}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -4328,7 +4500,48 @@ const styles = StyleSheet.create({
   scheduleHint: {
     color: COLORS.muted,
     fontSize: 13,
-    marginBottom: 26,
+    marginBottom: 18,
+  },
+
+  weekdayRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 8,
+  },
+
+  weekdayChoice: {
+    minWidth: 46,
+    height: 43,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  weekdayChoiceActive: {
+    backgroundColor: COLORS.green,
+    borderColor: COLORS.green,
+  },
+
+  weekdayChoiceText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+
+  weekdayChoiceTextActive: {
+    color: COLORS.background,
+  },
+
+  weekdayHint: {
+    color: COLORS.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 20,
   },
 
   timeGrid: {
