@@ -807,6 +807,11 @@ export default function App() {
     useState<WorkoutExercise[] | null>(null);
   const [sessionTitle, setSessionTitle] = useState<string | null>(null);
   const [sessionLength, setSessionLength] = useState<string | null>(null);
+  const [lastWorkoutSummary, setLastWorkoutSummary] = useState<{
+    title: string;
+    exercises: number;
+    plannedDuration: string;
+  } | null>(null);
   const [storageReady, setStorageReady] = useState(false);
   const [sessionUserId, setSessionUserId] = useState<string | null>(null);
   const [sessionEmail, setSessionEmail] = useState("");
@@ -1547,6 +1552,12 @@ export default function App() {
   };
 
   const finishTimedWorkout = () => {
+    const summary = {
+      title: activeWorkoutTitle,
+      exercises: activeExercises.length,
+      plannedDuration: activeWorkoutLength ?? "Custom",
+    };
+
     setCompletedWorkouts((current) =>
       Math.min(current + 1, trainingDays ?? current + 1)
     );
@@ -1554,21 +1565,22 @@ export default function App() {
     setWorkoutHistory((current) => [
       {
         id: `${Date.now()}`,
-        title: activeWorkoutTitle,
+        title: summary.title,
         completedAt: new Date().toISOString(),
-        exercises: activeExercises.length,
-        plannedDuration: activeWorkoutLength ?? "Custom",
+        exercises: summary.exercises,
+        plannedDuration: summary.plannedDuration,
       },
       ...current,
     ]);
 
+    setLastWorkoutSummary(summary);
     setCompletedSets([]);
     setSetLogs({});
     setTimerRunning(false);
     setSessionExercises(null);
     setSessionTitle(null);
     setSessionLength(null);
-    setStep(5);
+    setStep(12);
   };
 
   const moveToNextSet = () => {
@@ -1614,10 +1626,19 @@ export default function App() {
     if (!exercise) return;
 
     const key = `${currentExerciseIndex}-${currentSetIndex}`;
+    const setCount = getSetCount(exercise.target);
+    const isLastSet = currentSetIndex >= setCount - 1;
+    const isLastExercise =
+      currentExerciseIndex >= activeExercises.length - 1;
 
     setCompletedSets((current) =>
       current.includes(key) ? current : [...current, key]
     );
+
+    if (isLastSet && isLastExercise) {
+      finishTimedWorkout();
+      return;
+    }
 
     setTimerPhase("rest");
     setTimeLeft(getRestSeconds(exercise));
@@ -2118,6 +2139,13 @@ export default function App() {
     const setTarget = getSetTarget(currentExercise.target);
     const restSeconds = getRestSeconds(currentExercise);
     const isWork = timerPhase === "work";
+    const isLastSet = currentSetIndex >= setCount - 1;
+    const nextExercise = activeExercises[currentExerciseIndex + 1];
+    const recoveryDestination = isLastSet
+      ? nextExercise
+        ? `Up next: ${nextExercise.name}`
+        : "Workout complete"
+      : `${currentExercise.name} • Set ${currentSetIndex + 2}`;
 
     return (
       <SafeAreaView style={styles.container}>
@@ -2156,7 +2184,7 @@ export default function App() {
           <Text style={styles.timerSetLabel}>
             {isWork
               ? `Set ${currentSetIndex + 1} of ${setCount} • ${setTarget}`
-              : `${currentExercise.name} complete • next set coming up`}
+              : recoveryDestination}
           </Text>
 
           <View
@@ -2262,6 +2290,89 @@ export default function App() {
                   "Workout complete"}
             </Text>
           </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (step === 12 && lastWorkoutSummary) {
+    const weeklyTarget = trainingDays ?? 0;
+    const weeklyRemaining = Math.max(weeklyTarget - completedWorkouts, 0);
+
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+
+        <ScrollView
+          contentContainerStyle={styles.completeScreen}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.completeCheck}>
+            <Text style={styles.completeCheckText}>✓</Text>
+          </View>
+
+          <Text style={styles.workoutScreenLabel}>SESSION COMPLETE</Text>
+          <Text style={styles.completeTitle}>Nice work showing up.</Text>
+          <Text style={styles.completeSubtitle}>
+            Your workout is saved. Recovery is part of the plan too, so there is
+            no need to add extra work just to do more.
+          </Text>
+
+          <View style={styles.completeWorkoutCard}>
+            <Text style={styles.completeWorkoutLabel}>COMPLETED WORKOUT</Text>
+            <Text style={styles.completeWorkoutTitle}>
+              {lastWorkoutSummary.title}
+            </Text>
+
+            <View style={styles.completeStatsRow}>
+              <View style={styles.completeStat}>
+                <Text style={styles.completeStatValue}>
+                  {lastWorkoutSummary.exercises}
+                </Text>
+                <Text style={styles.completeStatLabel}>Exercises</Text>
+              </View>
+
+              <View style={styles.completeStat}>
+                <Text style={styles.completeStatValue}>
+                  {lastWorkoutSummary.plannedDuration}
+                </Text>
+                <Text style={styles.completeStatLabel}>Planned time</Text>
+              </View>
+
+              <View style={styles.completeStat}>
+                <Text style={styles.completeStatValue}>
+                  {completedWorkouts}/{trainingDays ?? "-"}
+                </Text>
+                <Text style={styles.completeStatLabel}>This week</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.completeRecoveryCard}>
+            <Text style={styles.completeRecoveryTitle}>
+              {weeklyRemaining === 0
+                ? "Weekly plan complete"
+                : `${weeklyRemaining} planned session${weeklyRemaining === 1 ? "" : "s"} remaining`}
+            </Text>
+            <Text style={styles.completeRecoveryText}>
+              Eat normally, hydrate, sleep, and give your body time to recover
+              before your next session.
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.timerPrimaryButton}
+            onPress={() => setStep(5)}
+          >
+            <Text style={styles.timerPrimaryButtonText}>BACK TO HOME</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.completeSecondaryButton}
+            onPress={() => setStep(8)}
+          >
+            <Text style={styles.completeSecondaryButtonText}>VIEW PROGRESS</Text>
+          </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
     );
@@ -3165,8 +3276,10 @@ export default function App() {
           </View>
 
           <View style={styles.streakBox}>
-            <Text style={styles.streakNumber}>🔥 0</Text>
-            <Text style={styles.streakLabel}>Day streak</Text>
+            <Text style={styles.streakNumber}>
+              {Math.max((trainingDays ?? 0) - completedWorkouts, 0)}
+            </Text>
+            <Text style={styles.streakLabel}>Sessions remaining</Text>
           </View>
         </View>
 
@@ -3236,7 +3349,7 @@ export default function App() {
 
       <View style={styles.bottomNavigation}>
         <NavItem emoji="⌂" text="Home" active />
-        <NavItem emoji="🏋️" text="Workout" />
+        <NavItem emoji="🏋️" text="Workout" onPress={startTimedWorkout} />
         <NavItem emoji="✦" text="Coach" onPress={() => setStep(10)} />
         <NavItem emoji="📈" text="Progress" onPress={() => setStep(8)} />
         <NavItem emoji="●" text="Profile" onPress={() => setStep(11)} />
@@ -5045,6 +5158,133 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     marginTop: 12,
+  },
+
+  completeScreen: {
+    padding: 22,
+    paddingTop: 54,
+    paddingBottom: 60,
+  },
+
+  completeCheck: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    backgroundColor: COLORS.green,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 22,
+  },
+
+  completeCheckText: {
+    color: COLORS.background,
+    fontSize: 36,
+    fontWeight: "900",
+  },
+
+  completeTitle: {
+    color: COLORS.white,
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: "900",
+    marginTop: 8,
+  },
+
+  completeSubtitle: {
+    color: COLORS.muted,
+    lineHeight: 21,
+    marginTop: 9,
+    marginBottom: 22,
+  },
+
+  completeWorkoutCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 22,
+    padding: 18,
+  },
+
+  completeWorkoutLabel: {
+    color: COLORS.green,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
+  completeWorkoutTitle: {
+    color: COLORS.white,
+    fontSize: 21,
+    fontWeight: "900",
+    marginTop: 6,
+  },
+
+  completeStatsRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 18,
+  },
+
+  completeStat: {
+    flex: 1,
+    minHeight: 82,
+    borderRadius: 16,
+    backgroundColor: COLORS.cardSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+  },
+
+  completeStatValue: {
+    color: COLORS.white,
+    fontSize: 17,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+
+  completeStatLabel: {
+    color: COLORS.muted,
+    fontSize: 10,
+    marginTop: 4,
+    textAlign: "center",
+  },
+
+  completeRecoveryCard: {
+    backgroundColor: "#10160C",
+    borderWidth: 1,
+    borderColor: "#2E4516",
+    borderRadius: 19,
+    padding: 17,
+    marginTop: 14,
+  },
+
+  completeRecoveryTitle: {
+    color: COLORS.green,
+    fontSize: 16,
+    fontWeight: "900",
+  },
+
+  completeRecoveryText: {
+    color: COLORS.muted,
+    lineHeight: 20,
+    marginTop: 6,
+  },
+
+  completeSecondaryButton: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    borderRadius: 17,
+    minHeight: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+
+  completeSecondaryButtonText: {
+    color: COLORS.white,
+    fontWeight: "900",
+    letterSpacing: 0.6,
   },
 
   profileScreen: {
