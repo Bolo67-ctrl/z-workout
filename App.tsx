@@ -97,6 +97,13 @@ type ExerciseLibraryItem = {
 
 type CoachEnergy = "Ready" | "Low Energy" | "Recovery";
 type CoachEquipmentMode = "Use My Plan" | "No Equipment Today";
+type CoachFocus =
+  | "Today's Plan"
+  | "Chest"
+  | "Core"
+  | "Legs"
+  | "Back & Arms"
+  | "Mobility";
 
 type PersistedAppData = {
   workoutPlace: Place | null;
@@ -921,6 +928,7 @@ export default function App() {
   const [selectedLibraryExercise, setSelectedLibraryExercise] =
     useState<ExerciseLibraryItem | null>(null);
   const [coachTime, setCoachTime] = useState("30 min");
+  const [coachFocus, setCoachFocus] = useState<CoachFocus>("Today's Plan");
   const [coachEnergy, setCoachEnergy] = useState<CoachEnergy>("Ready");
   const [coachEquipmentMode, setCoachEquipmentMode] =
     useState<CoachEquipmentMode>("Use My Plan");
@@ -1964,31 +1972,129 @@ export default function App() {
         ? 6
         : 7;
 
-    if (coachEnergy === "Recovery") {
-      const recoveryExercises: WorkoutExercise[] = [
+    const comfortableLimit =
+      coachEnergy === "Low Energy" ? Math.min(maxExercises, 4) : maxExercises;
+
+    const bodyweightByFocus: Record<
+      Exclude<CoachFocus, "Today's Plan">,
+      WorkoutExercise[]
+    > = {
+      Chest: [
+        {
+          name: "Push-Ups",
+          target: "2 × 6–10",
+          focus: "Chest + arms",
+          cue: "Use a wall, incline, or knees-down version if needed.",
+        },
+        {
+          name: "Shoulder Wall Slides",
+          target: "2 × 8–10",
+          focus: "Shoulders",
+          cue: "Use a comfortable range.",
+        },
+        {
+          name: "Plank",
+          target: "2 × 20–30 sec",
+          focus: "Core + shoulders",
+          cue: "Finish before your form breaks down.",
+        },
+        {
+          name: "Dead Bug",
+          target: "2 × 6–8 each side",
+          focus: "Core",
+          cue: "Move slowly and stay controlled.",
+        },
+      ],
+      Core: [
+        {
+          name: "Dead Bug",
+          target: "2 × 6–8 each side",
+          focus: "Core",
+          cue: "Move slowly and keep the movement controlled.",
+        },
+        {
+          name: "Bird Dog",
+          target: "2 × 6–8 each side",
+          focus: "Core + back",
+          cue: "Reach without twisting.",
+        },
+        {
+          name: "Plank",
+          target: "2 × 20–30 sec",
+          focus: "Core",
+          cue: "Stop before your form breaks down.",
+        },
+        {
+          name: "Glute Bridges",
+          target: "2 × 10–12",
+          focus: "Hips + core",
+          cue: "Move smoothly and pause briefly at the top.",
+        },
+      ],
+      Legs: [
+        {
+          name: "Bodyweight Squats",
+          target: "2 × 10–12",
+          focus: "Legs",
+          cue: "Use a comfortable depth and steady pace.",
+        },
+        {
+          name: "Reverse Lunges",
+          target: "2 × 6–8 each side",
+          focus: "Legs + balance",
+          cue: "Use support for balance if needed.",
+        },
+        {
+          name: "Glute Bridges",
+          target: "2 × 10–12",
+          focus: "Hips",
+          cue: "Move smoothly and pause briefly at the top.",
+        },
+        {
+          name: "Calf Raises",
+          target: "2 × 10–15",
+          focus: "Calves",
+          cue: "Use a wall or chair for balance.",
+        },
+      ],
+      "Back & Arms": [
+        {
+          name: "Bird Dog",
+          target: "2 × 6–8 each side",
+          focus: "Back + core",
+          cue: "Move slowly without twisting.",
+        },
+        {
+          name: "Shoulder Wall Slides",
+          target: "2 × 8–10",
+          focus: "Upper back + shoulders",
+          cue: "Use a comfortable range.",
+        },
+        {
+          name: "Push-Ups",
+          target: "2 × 6–10",
+          focus: "Arms + shoulders",
+          cue: "Choose a comfortable variation.",
+        },
+        {
+          name: "Plank",
+          target: "2 × 20–30 sec",
+          focus: "Core + shoulders",
+          cue: "Stop before your form breaks down.",
+        },
+      ],
+      Mobility: [
         {
           name: "Cat-Cow",
           target: "2 × 6–8 slow reps",
           focus: "Spine",
-          cue: "Move slowly and stay comfortable.",
+          cue: "Move slowly through a comfortable range.",
         },
         {
           name: "Shoulder Wall Slides",
           target: "2 × 8–10",
           focus: "Shoulders",
           cue: "Use a comfortable range without forcing the movement.",
-        },
-        {
-          name: "Glute Bridge",
-          target: "2 × 10–12",
-          focus: "Hips",
-          cue: "Move smoothly and pause briefly at the top.",
-        },
-        {
-          name: "Dead Bug",
-          target: "2 × 6–8 each side",
-          focus: "Core",
-          cue: "Keep the movement slow and controlled.",
         },
         {
           name: "Bodyweight Squat Hold",
@@ -2002,80 +2108,77 @@ export default function App() {
           focus: "Core + back",
           cue: "Move slowly without twisting.",
         },
-      ];
+      ],
+    };
 
-      return recoveryExercises.slice(0, Math.min(maxExercises, 6));
+    if (coachEnergy === "Recovery") {
+      return bodyweightByFocus.Mobility.slice(
+        0,
+        Math.min(comfortableLimit, bodyweightByFocus.Mobility.length)
+      );
     }
 
     if (coachEquipmentMode === "No Equipment Today") {
-      const bodyweightExercises: WorkoutExercise[] = [
-        {
-          name: "Push-Ups",
-          target: "2 × 6–10",
-          focus: "Chest + arms",
-          cue: "Use a wall, incline, or knees-down version if needed.",
-        },
-        {
-          name: "Bodyweight Squats",
-          target: "2 × 10–12",
-          focus: "Legs",
-          cue: "Use a comfortable depth and steady pace.",
-        },
-        {
-          name: "Reverse Lunges",
-          target: "2 × 6–8 each side",
-          focus: "Legs",
-          cue: "Use support for balance if needed.",
-        },
-        {
-          name: "Glute Bridges",
-          target: "2 × 10–12",
-          focus: "Hips",
-          cue: "Move smoothly and pause briefly at the top.",
-        },
-        {
-          name: "Bird Dog",
-          target: "2 × 6–8 each side",
-          focus: "Core + back",
-          cue: "Move slowly without twisting.",
-        },
-        {
-          name: "Dead Bug",
-          target: "2 × 6–8 each side",
-          focus: "Core",
-          cue: "Keep the movement controlled.",
-        },
-        {
-          name: "Calf Raises",
-          target: "2 × 10–15",
-          focus: "Calves",
-          cue: "Use a wall or chair for balance.",
-        },
-      ];
+      const fallbackFocus =
+        coachFocus === "Today's Plan" ? "Core" : coachFocus;
 
-      return bodyweightExercises.slice(0, maxExercises);
+      return bodyweightByFocus[fallbackFocus].slice(0, comfortableLimit);
     }
 
-    const planExercises =
-      coachEnergy === "Low Energy"
-        ? workoutExercises.slice(0, Math.max(3, Math.min(maxExercises, 5)))
-        : workoutExercises.slice(0, maxExercises);
+    let sourceSession: WorkoutPlanSession | null = null;
 
-    return planExercises;
+    if (coachFocus === "Today's Plan") {
+      sourceSession =
+        (todayPlanSession && !todayPlanCompleted
+          ? todayPlanSession
+          : nextPlanSession) ??
+        weeklySessions[0] ??
+        null;
+    } else {
+      const titleMatch =
+        coachFocus === "Chest"
+          ? ["Chest", "Upper Body"]
+          : coachFocus === "Core"
+          ? ["Core"]
+          : coachFocus === "Legs"
+          ? ["Legs", "Lower Body"]
+          : coachFocus === "Back & Arms"
+          ? ["Back", "Upper Body"]
+          : ["Mobility"];
+
+      sourceSession =
+        weeklySessions.find((session) =>
+          titleMatch.some(
+            (term) =>
+              session.title.includes(term) || session.focus.includes(term)
+          )
+        ) ?? null;
+    }
+
+    const sourceExercises =
+      sourceSession?.exercises ??
+      bodyweightByFocus[
+        coachFocus === "Today's Plan" ? "Core" : coachFocus
+      ];
+
+    return sourceExercises.slice(0, comfortableLimit);
   };
 
   const startCoachWorkout = () => {
     const coachExercises = getCoachExercises();
     const firstExercise = coachExercises[0];
 
+    const focusTitle =
+      coachFocus === "Today's Plan" ? "Today's Plan" : coachFocus;
+
     const title =
       coachEnergy === "Recovery"
         ? "Recovery & Mobility Session"
-        : coachEquipmentMode === "No Equipment Today"
-        ? "No-Equipment Coach Session"
         : coachEnergy === "Low Energy"
-        ? "Light Coach Session"
-        : "Z Coach Session";
+        ? `Light ${focusTitle} Session`
+        : coachEquipmentMode === "No Equipment Today"
+        ? `No-Equipment ${focusTitle} Session`
+        : `${focusTitle} Coach Session`;
 
     setActivePlanSessionId(null);
     setSessionExercises(coachExercises);
@@ -2239,14 +2342,18 @@ export default function App() {
     currentSetIndex,
   ]);
 
+  const coachPreviewExercises = getCoachExercises();
+
   const coachSummary =
     coachEnergy === "Recovery"
       ? "A gentle mobility-focused session with comfortable movement and short recovery breaks."
       : coachEquipmentMode === "No Equipment Today"
-      ? `A ${coachTime} bodyweight session using no equipment.`
+      ? `A ${coachTime} ${coachFocus === "Today's Plan" ? "bodyweight" : coachFocus.toLowerCase()} session using no equipment.`
       : coachEnergy === "Low Energy"
-      ? `A lighter ${coachTime} version of your plan with fewer exercises.`
-      : `A ${coachTime} session based on your current Z Plan and available equipment.`;
+      ? `A lighter ${coachTime} ${coachFocus === "Today's Plan" ? "version of your plan" : coachFocus.toLowerCase() + " session"} with fewer exercises.`
+      : coachFocus === "Today's Plan"
+      ? `A ${coachTime} session based on your next planned workout.`
+      : `A ${coachTime} ${coachFocus.toLowerCase()} session matched to your current equipment.`;
 
   const weeklyProgressPercent = trainingDays
     ? Math.min(100, Math.round((completedWorkouts / trainingDays) * 100))
@@ -4505,6 +4612,38 @@ export default function App() {
             ))}
           </View>
 
+          <Text style={styles.coachQuestion}>What do you want to train?</Text>
+          <View style={styles.coachFocusGrid}>
+            {(
+              [
+                "Today's Plan",
+                "Chest",
+                "Core",
+                "Legs",
+                "Back & Arms",
+                "Mobility",
+              ] as CoachFocus[]
+            ).map((focus) => (
+              <TouchableOpacity
+                key={focus}
+                style={[
+                  styles.coachFocusChip,
+                  coachFocus === focus && styles.coachFocusChipActive,
+                ]}
+                onPress={() => setCoachFocus(focus)}
+              >
+                <Text
+                  style={[
+                    styles.coachFocusText,
+                    coachFocus === focus && styles.coachFocusTextActive,
+                  ]}
+                >
+                  {focus}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
           <Text style={styles.coachQuestion}>What equipment is available now?</Text>
           <View style={styles.coachStack}>
             {(["Use My Plan", "No Equipment Today"] as CoachEquipmentMode[]).map(
@@ -4575,13 +4714,33 @@ export default function App() {
             <Text style={styles.coachRecommendationTitle}>
               {coachEnergy === "Recovery"
                 ? "Recovery & Mobility"
-                : coachEquipmentMode === "No Equipment Today"
-                ? "Bodyweight Session"
-                : coachEnergy === "Low Energy"
-                ? "Lighter Plan"
-                : "Your Plan, Adapted"}
+                : coachFocus === "Today's Plan"
+                ? coachEnergy === "Low Energy"
+                  ? "Today's Plan, Lighter"
+                  : "Today's Plan, Adapted"
+                : coachFocus}
             </Text>
             <Text style={styles.coachRecommendationText}>{coachSummary}</Text>
+
+            <View style={styles.coachPreviewDivider} />
+
+            <Text style={styles.coachPreviewLabel}>SESSION PREVIEW</Text>
+            {coachPreviewExercises.map((exercise, index) => (
+              <View
+                key={`coach-preview-${exercise.name}-${index}`}
+                style={styles.coachPreviewRow}
+              >
+                <View style={styles.coachPreviewNumber}>
+                  <Text style={styles.coachPreviewNumberText}>{index + 1}</Text>
+                </View>
+                <View style={styles.coachPreviewContent}>
+                  <Text style={styles.coachPreviewName}>{exercise.name}</Text>
+                  <Text style={styles.coachPreviewMeta}>
+                    {exercise.target} • {exercise.focus}
+                  </Text>
+                </View>
+              </View>
+            ))}
           </View>
 
           <TouchableOpacity
@@ -7926,6 +8085,37 @@ const styles = StyleSheet.create({
     color: COLORS.background,
   },
 
+  coachFocusGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 22,
+  },
+
+  coachFocusChip: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    borderRadius: 24,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+
+  coachFocusChipActive: {
+    backgroundColor: COLORS.green,
+    borderColor: COLORS.green,
+  },
+
+  coachFocusText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+
+  coachFocusTextActive: {
+    color: COLORS.background,
+  },
+
   coachStack: {
     gap: 10,
     marginBottom: 22,
@@ -7988,6 +8178,61 @@ const styles = StyleSheet.create({
     color: COLORS.muted,
     lineHeight: 20,
     marginTop: 7,
+  },
+
+  coachPreviewDivider: {
+    height: 1,
+    backgroundColor: "#2E4516",
+    marginVertical: 15,
+  },
+
+  coachPreviewLabel: {
+    color: COLORS.green,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1,
+    marginBottom: 9,
+  },
+
+  coachPreviewRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#0D1209",
+    borderRadius: 14,
+    padding: 10,
+    marginBottom: 7,
+  },
+
+  coachPreviewNumber: {
+    width: 27,
+    height: 27,
+    borderRadius: 9,
+    backgroundColor: COLORS.green,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+
+  coachPreviewNumberText: {
+    color: COLORS.background,
+    fontSize: 10,
+    fontWeight: "900",
+  },
+
+  coachPreviewContent: {
+    flex: 1,
+  },
+
+  coachPreviewName: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "900",
+  },
+
+  coachPreviewMeta: {
+    color: COLORS.muted,
+    fontSize: 10,
+    marginTop: 3,
   },
 
   coachSafetyText: {
