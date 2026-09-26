@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   SafeAreaView,
   ScrollView,
+  Image,
   StyleSheet,
   Text,
   TextInput,
@@ -2549,9 +2550,11 @@ export default function App() {
       <SafeAreaView style={styles.container}>
         <StatusBar style="light" />
         <View style={styles.storageLoading}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logo}>Z</Text>
-          </View>
+          <Image
+            source={require("./assets/icon.png")}
+            style={styles.brandLogoLarge}
+            resizeMode="contain"
+          />
           <Text style={styles.storageLoadingTitle}>Z WORKOUT</Text>
           <Text style={styles.storageLoadingText}>Loading your plan...</Text>
         </View>
@@ -2565,9 +2568,11 @@ export default function App() {
         <StatusBar style="light" />
 
         <View style={styles.centerContent}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logo}>Z</Text>
-          </View>
+          <Image
+            source={require("./assets/icon.png")}
+            style={styles.brandLogoLarge}
+            resizeMode="contain"
+          />
 
           <Text style={styles.title}>Z WORKOUT</Text>
 
@@ -4931,9 +4936,16 @@ export default function App() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <View>
-            <Text style={styles.smallMuted}>YOUR Z PLAN</Text>
-            <Text style={styles.dashboardTitle}>Ready to train?</Text>
+          <View style={styles.headerBrand}>
+            <Image
+              source={require("./assets/icon.png")}
+              style={styles.headerBrandLogo}
+              resizeMode="cover"
+            />
+            <View>
+              <Text style={styles.smallMuted}>YOUR Z PLAN</Text>
+              <Text style={styles.dashboardTitle}>Ready to train?</Text>
+            </View>
           </View>
 
           <TouchableOpacity
@@ -5219,21 +5231,12 @@ const styles = StyleSheet.create({
     paddingBottom: 60,
   },
 
-  logoCircle: {
-    width: 100,
-    height: 100,
+  brandLogoLarge: {
+    width: 112,
+    height: 112,
     borderRadius: 30,
-    backgroundColor: COLORS.green,
-    alignItems: "center",
-    justifyContent: "center",
     alignSelf: "center",
     marginBottom: 24,
-  },
-
-  logo: {
-    fontSize: 58,
-    fontWeight: "900",
-    color: COLORS.background,
   },
 
   title: {
@@ -8607,6 +8610,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 20,
+  },
+
+  headerBrand: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    paddingRight: 12,
+  },
+
+  headerBrandLogo: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    marginRight: 12,
   },
 
   smallMuted: {
