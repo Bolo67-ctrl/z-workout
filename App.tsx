@@ -1096,7 +1096,7 @@ export default function App() {
 
   const submitAuth = async () => {
     if (!supabaseConfigured) {
-      setAuthMessage("Cloud sync needs Supabase setup first.");
+      setAuthMessage("Account access needs Supabase setup first.");
       return;
     }
 
@@ -1120,7 +1120,7 @@ export default function App() {
         if (error) {
           setAuthMessage(error.message);
         } else {
-          setAuthMessage("Signed in. Your Z data is syncing.");
+          setAuthMessage("Signed in successfully.");
           setAuthPassword("");
         }
       } else {
@@ -1136,7 +1136,7 @@ export default function App() {
           setAuthMode("signin");
           setAuthPassword("");
         } else {
-          setAuthMessage("Account created. Your Z data is syncing.");
+          setAuthMessage("Account created successfully.");
           setAuthPassword("");
         }
       }
@@ -2959,34 +2959,12 @@ export default function App() {
             <Text style={styles.workoutBack}>‹ Back home</Text>
           </TouchableOpacity>
 
-          <Text style={styles.workoutScreenLabel}>PROFILE & SYNC</Text>
-          <Text style={styles.profileTitle}>Keep your Z data with you</Text>
+          <Text style={styles.workoutScreenLabel}>PROFILE</Text>
+          <Text style={styles.profileTitle}>Your Z profile</Text>
           <Text style={styles.profileSubtitle}>
-            Your plan already saves on this device. An account adds cloud sync
-            so the same plan and progress can follow you to another device.
+            Manage your account and keep your workout plan connected to your Z
+            profile.
           </Text>
-
-          <View style={styles.syncStatusCard}>
-            <View style={styles.syncStatusTop}>
-              <View>
-                <Text style={styles.syncStatusLabel}>CLOUD STATUS</Text>
-                <Text style={styles.syncStatusValue}>{cloudSyncStatus}</Text>
-              </View>
-
-              <View
-                style={[
-                  styles.syncDot,
-                  cloudSyncStatus === "Synced" && styles.syncDotReady,
-                ]}
-              />
-            </View>
-
-            <Text style={styles.syncStatusText}>
-              {sessionUserId
-                ? `Signed in as ${sessionEmail}`
-                : "Local saving is active even without an account."}
-            </Text>
-          </View>
 
           {!supabaseConfigured ? (
             <View style={styles.profileSetupCard}>
@@ -3010,8 +2988,8 @@ export default function App() {
 
                 <Text style={styles.profileEmail}>{sessionEmail}</Text>
                 <Text style={styles.profileCloudNote}>
-                  Plan, progress, workout history, and meal preferences sync to
-                  this account.
+                  Your workout plan, progress, history, and meal preferences are
+                  connected to this account.
                 </Text>
               </View>
 
@@ -3098,7 +3076,7 @@ export default function App() {
                   {authLoading
                     ? "PLEASE WAIT..."
                     : authMode === "signin"
-                    ? "SIGN IN & SYNC"
+                    ? "SIGN IN"
                     : "CREATE ACCOUNT"}
                 </Text>
               </TouchableOpacity>
