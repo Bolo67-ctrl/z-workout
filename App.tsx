@@ -39,13 +39,21 @@ type MealCategory =
   | "Vegetarian"
   | "Quick";
 
+type MealTiming = "Anytime" | "Before Workout" | "After Workout";
+
 type MealRecipe = {
   title: string;
   emoji: string;
-  category: Exclude<MealCategory, "All">;
-  time: string;
+  categories: Exclude<MealCategory, "All">[];
+  workoutGoals: Goal[];
+  timing: Exclude<MealTiming, "Anytime">[];
+  prepTime: string;
+  cookTime: string;
+  servings: string;
+  summary: string;
   ingredients: string[];
   steps: string[];
+  tips: string[];
 };
 
 type WorkoutHistoryItem = {
@@ -249,75 +257,489 @@ const EXERCISE_LIBRARY: ExerciseLibraryItem[] = [
 
 const MEALS: MealRecipe[] = [
   {
+    title: "Banana Oatmeal with Peanut Butter",
+    emoji: "🥣",
+    categories: ["Breakfast", "Vegetarian", "Quick"],
+    workoutGoals: ["muscle", "strength", "endurance", "consistency", "mobility"],
+    timing: ["Before Workout", "After Workout"],
+    prepTime: "3 min",
+    cookTime: "7 min",
+    servings: "1 serving",
+    summary: "Warm oats with banana, milk, and peanut butter for an easy mix of carbohydrates, protein, and fats.",
+    ingredients: [
+      "1/2 cup rolled oats",
+      "1 cup milk or fortified non-dairy milk",
+      "1 banana",
+      "1 tablespoon peanut butter",
+      "1/2 teaspoon cinnamon",
+      "Optional: berries or chopped nuts",
+    ],
+    steps: [
+      "Add the oats and milk to a small saucepan.",
+      "Cook over medium-low heat for about 5 to 7 minutes, stirring often, until the oats are soft and creamy.",
+      "Slice half of the banana and stir it into the oatmeal during the last minute of cooking.",
+      "Pour the oatmeal into a bowl.",
+      "Top with the remaining banana, peanut butter, and cinnamon.",
+      "Add berries or chopped nuts if you want extra texture and variety.",
+    ],
+    tips: [
+      "If you are eating close to a workout, keep the toppings simple and choose what feels comfortable for your stomach.",
+      "You can also make this in the microwave in short intervals, stirring between each one.",
+    ],
+  },
+  {
     title: "Egg & Avocado Toast",
     emoji: "🥑",
-    category: "Breakfast",
-    time: "10 min",
-    ingredients: ["eggs", "whole-grain toast", "avocado", "tomato"],
+    categories: ["Breakfast", "Quick"],
+    workoutGoals: ["muscle", "strength", "consistency", "mobility"],
+    timing: ["After Workout"],
+    prepTime: "5 min",
+    cookTime: "8 min",
+    servings: "1 serving",
+    summary: "Eggs, whole-grain toast, avocado, and tomato make a simple balanced breakfast or post-workout meal.",
+    ingredients: [
+      "2 eggs",
+      "2 slices whole-grain bread",
+      "1/2 avocado",
+      "1 small tomato, sliced",
+      "1 teaspoon olive oil or a small amount of cooking spray",
+      "Black pepper or herbs to taste",
+    ],
     steps: [
-      "Toast the bread.",
-      "Cook the eggs the way you like.",
-      "Add avocado and tomato, then place the eggs on top.",
+      "Toast the bread until it reaches the texture you like.",
+      "Heat a nonstick pan over medium heat and add the olive oil.",
+      "Crack in the eggs and cook them until the whites and yolks are done the way you prefer.",
+      "Mash the avocado with a fork and spread it over the toast.",
+      "Add the tomato slices.",
+      "Place the cooked eggs on top and finish with pepper or herbs.",
+    ],
+    tips: [
+      "For a bigger meal, add fruit or yogurt on the side.",
+      "Cook eggs until they are safely done and use clean utensils for raw egg.",
     ],
   },
   {
-    title: "Chicken Rice Bowl",
-    emoji: "🍚",
-    category: "Lunch",
-    time: "20 min",
-    ingredients: ["chicken", "rice", "mixed vegetables", "olive oil"],
-    steps: [
-      "Cook or warm the rice.",
-      "Cook the chicken fully and slice it.",
-      "Add vegetables and combine everything in a bowl.",
-    ],
-  },
-  {
-    title: "Salmon, Potato & Greens",
-    emoji: "🐟",
-    category: "Dinner",
-    time: "30 min",
-    ingredients: ["salmon", "potatoes", "green vegetables", "olive oil"],
-    steps: [
-      "Roast or air-fry the potatoes.",
-      "Cook the salmon until fully done.",
-      "Serve with green vegetables.",
-    ],
-  },
-  {
-    title: "Greek Yogurt Fruit Bowl",
+    title: "Berry Yogurt Oat Bowl",
     emoji: "🫐",
-    category: "Snack",
-    time: "5 min",
-    ingredients: ["Greek yogurt", "berries", "banana", "oats or granola"],
-    steps: [
-      "Add yogurt to a bowl.",
-      "Top with fruit.",
-      "Add oats or granola for crunch.",
+    categories: ["Breakfast", "Snack", "Vegetarian", "Quick"],
+    workoutGoals: ["muscle", "strength", "endurance", "consistency", "mobility"],
+    timing: ["Before Workout", "After Workout"],
+    prepTime: "5 min",
+    cookTime: "No cooking",
+    servings: "1 serving",
+    summary: "A no-cook bowl with yogurt, fruit, oats, and seeds that works for breakfast or a quick snack.",
+    ingredients: [
+      "1 cup Greek yogurt or another yogurt you enjoy",
+      "1/2 cup berries",
+      "1/2 banana, sliced",
+      "1/3 cup oats or granola",
+      "1 teaspoon chia seeds or ground flaxseed",
+      "Optional: a small drizzle of honey",
     ],
-  },
-  {
-    title: "Bean & Cheese Quesadilla",
-    emoji: "🌯",
-    category: "Vegetarian",
-    time: "12 min",
-    ingredients: ["tortilla", "beans", "cheese", "tomato", "lettuce"],
     steps: [
-      "Add beans and cheese to the tortilla.",
-      "Warm it in a pan until the cheese melts.",
-      "Serve with tomato and lettuce.",
+      "Spoon the yogurt into a bowl.",
+      "Wash the berries and add them with the sliced banana.",
+      "Sprinkle the oats or granola over the fruit.",
+      "Add the chia seeds or ground flaxseed.",
+      "Add a small drizzle of honey if you want a little more sweetness.",
+    ],
+    tips: [
+      "Use a yogurt you actually enjoy; dairy and fortified non-dairy options can both work.",
+      "If eating right before training, use a smaller portion if that feels more comfortable.",
     ],
   },
   {
     title: "Peanut Butter Banana Wrap",
     emoji: "🍌",
-    category: "Quick",
-    time: "5 min",
-    ingredients: ["tortilla", "peanut butter", "banana"],
+    categories: ["Snack", "Vegetarian", "Quick"],
+    workoutGoals: ["endurance", "consistency", "muscle", "strength"],
+    timing: ["Before Workout"],
+    prepTime: "5 min",
+    cookTime: "No cooking",
+    servings: "1 serving",
+    summary: "A fast portable snack with a tortilla, banana, and peanut butter.",
+    ingredients: [
+      "1 whole-grain tortilla",
+      "1 banana",
+      "1 to 2 tablespoons peanut butter",
+      "Optional: a pinch of cinnamon",
+    ],
     steps: [
-      "Spread peanut butter on the tortilla.",
-      "Add the banana.",
-      "Roll it up and slice if you want.",
+      "Lay the tortilla flat on a plate.",
+      "Spread the peanut butter evenly over the tortilla.",
+      "Place the banana near one edge.",
+      "Add cinnamon if you like it.",
+      "Roll the tortilla around the banana and slice it in half.",
+    ],
+    tips: [
+      "This is easy to make before school, practice, or a workout.",
+      "If peanut butter does not work for you, use another nut or seed butter you can safely eat.",
+    ],
+  },
+  {
+    title: "Chicken Rice Vegetable Bowl",
+    emoji: "🍚",
+    categories: ["Lunch", "Dinner"],
+    workoutGoals: ["muscle", "strength", "endurance", "consistency"],
+    timing: ["After Workout"],
+    prepTime: "10 min",
+    cookTime: "25 min",
+    servings: "2 servings",
+    summary: "Chicken, rice, and colorful vegetables make a flexible meal that is easy to prepare ahead.",
+    ingredients: [
+      "2 boneless chicken breasts or thighs",
+      "1 cup uncooked rice",
+      "2 cups water or low-sodium broth",
+      "2 cups mixed vegetables",
+      "1 tablespoon olive oil",
+      "1/2 teaspoon garlic powder",
+      "1/2 teaspoon paprika",
+      "Black pepper to taste",
+    ],
+    steps: [
+      "Rinse the rice if the package recommends it.",
+      "Add the rice and water or broth to a saucepan, bring to a boil, then cover and reduce to low heat.",
+      "Cook the rice according to the package directions until tender.",
+      "Cut the chicken into even pieces and season with garlic powder, paprika, and pepper.",
+      "Heat half of the olive oil in a pan over medium heat.",
+      "Cook the chicken, turning the pieces so they cook evenly, until fully cooked through.",
+      "Remove the chicken and add the remaining oil and vegetables to the same pan.",
+      "Cook the vegetables until tender but still colorful.",
+      "Divide rice, chicken, and vegetables into bowls and serve warm.",
+    ],
+    tips: [
+      "Use frozen vegetables when you want to make this faster.",
+      "Leftovers can be refrigerated promptly and reheated until hot.",
+    ],
+  },
+  {
+    title: "Turkey Tomato Pasta",
+    emoji: "🍝",
+    categories: ["Lunch", "Dinner"],
+    workoutGoals: ["muscle", "strength", "endurance"],
+    timing: ["After Workout"],
+    prepTime: "8 min",
+    cookTime: "22 min",
+    servings: "3 servings",
+    summary: "Pasta with lean ground turkey and tomato sauce is a simple meal for active days.",
+    ingredients: [
+      "8 ounces pasta",
+      "12 ounces ground turkey",
+      "2 cups tomato pasta sauce",
+      "1 teaspoon olive oil",
+      "1/2 onion, diced",
+      "1 teaspoon Italian seasoning",
+      "Optional: spinach",
+    ],
+    steps: [
+      "Bring a pot of water to a boil and cook the pasta according to the package directions.",
+      "While the pasta cooks, heat olive oil in a large pan over medium heat.",
+      "Add the diced onion and cook for 3 to 4 minutes until softened.",
+      "Add the ground turkey and break it into small pieces with a spoon.",
+      "Cook the turkey until it is fully cooked with no pink remaining.",
+      "Stir in the tomato sauce and Italian seasoning.",
+      "Add spinach if using and cook until wilted.",
+      "Drain the pasta and mix it into the sauce, or spoon the sauce over each serving.",
+    ],
+    tips: [
+      "Choose any pasta shape you like, including whole-grain pasta if you enjoy it.",
+      "Add a side salad or another vegetable for variety.",
+    ],
+  },
+  {
+    title: "Salmon, Potatoes & Green Vegetables",
+    emoji: "🐟",
+    categories: ["Dinner"],
+    workoutGoals: ["muscle", "strength", "endurance", "mobility"],
+    timing: ["After Workout"],
+    prepTime: "10 min",
+    cookTime: "30 min",
+    servings: "2 servings",
+    summary: "A complete dinner with salmon, roasted potatoes, and vegetables.",
+    ingredients: [
+      "2 salmon fillets",
+      "2 medium potatoes",
+      "2 cups broccoli, green beans, or another green vegetable",
+      "1 tablespoon olive oil",
+      "1/2 teaspoon garlic powder",
+      "Black pepper and lemon to taste",
+    ],
+    steps: [
+      "Heat the oven to 425°F (220°C).",
+      "Wash the potatoes and cut them into small even pieces.",
+      "Toss the potatoes with half of the olive oil, garlic powder, and pepper.",
+      "Spread the potatoes on a baking sheet and roast for about 15 minutes.",
+      "Move the potatoes to one side and add the salmon and vegetables to the pan.",
+      "Brush the salmon and vegetables lightly with the remaining olive oil.",
+      "Return the pan to the oven and cook until the salmon is fully cooked and the vegetables are tender.",
+      "Serve with lemon if you like.",
+    ],
+    tips: [
+      "Cooking time changes with the thickness of the salmon, so check that it is cooked safely before serving.",
+      "Frozen vegetables can make this meal easier.",
+    ],
+  },
+  {
+    title: "Beef & Vegetable Rice Stir-Fry",
+    emoji: "🥘",
+    categories: ["Lunch", "Dinner"],
+    workoutGoals: ["muscle", "strength", "endurance"],
+    timing: ["After Workout"],
+    prepTime: "12 min",
+    cookTime: "18 min",
+    servings: "3 servings",
+    summary: "A quick pan meal with beef, rice, and mixed vegetables.",
+    ingredients: [
+      "12 ounces lean beef strips",
+      "3 cups cooked rice",
+      "3 cups mixed stir-fry vegetables",
+      "1 tablespoon cooking oil",
+      "2 tablespoons low-sodium soy sauce",
+      "1 teaspoon minced garlic",
+      "Optional: grated ginger",
+    ],
+    steps: [
+      "Prepare the rice first if you do not already have cooked rice.",
+      "Heat a large pan over medium-high heat and add half of the oil.",
+      "Add the beef in a single layer and cook in batches if needed so it browns instead of steaming.",
+      "Remove the fully cooked beef to a clean plate.",
+      "Add the remaining oil and vegetables to the pan.",
+      "Cook the vegetables for several minutes until tender-crisp.",
+      "Add garlic and ginger if using and stir for about 30 seconds.",
+      "Return the beef to the pan and add the soy sauce.",
+      "Stir everything together and serve over warm rice.",
+    ],
+    tips: [
+      "You can replace the beef with chicken, tofu, or another protein you enjoy.",
+      "Using leftover cooked rice makes this especially quick.",
+    ],
+  },
+  {
+    title: "Chicken Potato Power Bowl",
+    emoji: "🥔",
+    categories: ["Lunch", "Dinner"],
+    workoutGoals: ["muscle", "strength", "consistency"],
+    timing: ["After Workout"],
+    prepTime: "10 min",
+    cookTime: "30 min",
+    servings: "2 servings",
+    summary: "Roasted potatoes, chicken, vegetables, and a yogurt sauce in one easy bowl.",
+    ingredients: [
+      "2 medium potatoes, diced",
+      "2 boneless chicken breasts or thighs",
+      "2 cups mixed vegetables",
+      "1 tablespoon olive oil",
+      "1/2 cup plain yogurt",
+      "1 teaspoon lemon juice",
+      "Garlic powder and black pepper to taste",
+    ],
+    steps: [
+      "Heat the oven to 425°F (220°C).",
+      "Toss the diced potatoes with half the olive oil and place them on a baking sheet.",
+      "Roast the potatoes for about 25 to 30 minutes, turning once.",
+      "Season the chicken with garlic powder and pepper.",
+      "Heat the remaining oil in a pan over medium heat and cook the chicken until fully cooked.",
+      "Cook or steam the vegetables until tender.",
+      "Mix the yogurt and lemon juice in a small bowl.",
+      "Slice the cooked chicken and divide the potatoes, vegetables, and chicken between two bowls.",
+      "Spoon the yogurt sauce over the top.",
+    ],
+    tips: [
+      "You can swap regular potatoes for sweet potatoes.",
+      "Use whatever vegetables you have available.",
+    ],
+  },
+  {
+    title: "Tuna Pasta & Peas",
+    emoji: "🥫",
+    categories: ["Lunch", "Dinner", "Quick"],
+    workoutGoals: ["muscle", "strength", "endurance", "consistency"],
+    timing: ["After Workout"],
+    prepTime: "5 min",
+    cookTime: "15 min",
+    servings: "2 servings",
+    summary: "A pantry-friendly pasta meal with tuna and peas.",
+    ingredients: [
+      "6 ounces pasta",
+      "1 can tuna, drained",
+      "1 cup frozen peas",
+      "1 tablespoon olive oil",
+      "1 tablespoon lemon juice",
+      "Black pepper to taste",
+      "Optional: grated cheese",
+    ],
+    steps: [
+      "Bring a pot of water to a boil.",
+      "Add the pasta and cook according to the package directions.",
+      "Add the frozen peas during the last 2 to 3 minutes of pasta cooking.",
+      "Drain the pasta and peas well.",
+      "Return them to the pot and stir in the drained tuna.",
+      "Add olive oil, lemon juice, and pepper.",
+      "Mix until everything is warmed through and add grated cheese if you like.",
+    ],
+    tips: [
+      "This recipe is useful when you need something fast with shelf-stable ingredients.",
+      "Choose tuna packed in water or oil based on what you prefer.",
+    ],
+  },
+  {
+    title: "Bean & Cheese Quesadilla",
+    emoji: "🌯",
+    categories: ["Lunch", "Dinner", "Vegetarian", "Quick"],
+    workoutGoals: ["strength", "endurance", "consistency", "mobility"],
+    timing: ["After Workout"],
+    prepTime: "5 min",
+    cookTime: "8 min",
+    servings: "1 serving",
+    summary: "Beans and cheese in a crispy tortilla with vegetables on the side.",
+    ingredients: [
+      "1 large tortilla",
+      "1/2 cup beans, drained and rinsed",
+      "1/3 cup shredded cheese",
+      "1/2 tomato, diced",
+      "1 handful lettuce or spinach",
+      "Optional: salsa",
+    ],
+    steps: [
+      "Place the tortilla on a clean cutting board.",
+      "Spread the beans over one half of the tortilla and lightly mash them with a fork.",
+      "Sprinkle the cheese over the beans.",
+      "Fold the tortilla in half.",
+      "Heat a nonstick pan over medium heat.",
+      "Cook the quesadilla for 2 to 4 minutes per side until the tortilla is crisp and the cheese has melted.",
+      "Cut into wedges and serve with tomato, lettuce or spinach, and salsa if you like.",
+    ],
+    tips: [
+      "Use black beans, pinto beans, or whichever beans you enjoy.",
+      "Add leftover cooked chicken if you want a non-vegetarian version.",
+    ],
+  },
+  {
+    title: "Lentil Rice Bowl",
+    emoji: "🫘",
+    categories: ["Lunch", "Dinner", "Vegetarian"],
+    workoutGoals: ["muscle", "strength", "endurance", "consistency", "mobility"],
+    timing: ["After Workout"],
+    prepTime: "10 min",
+    cookTime: "25 min",
+    servings: "3 servings",
+    summary: "Lentils, rice, vegetables, and a simple lemon dressing make a filling meat-free meal.",
+    ingredients: [
+      "1 cup cooked lentils",
+      "2 cups cooked rice",
+      "2 cups chopped vegetables",
+      "1 tablespoon olive oil",
+      "1 tablespoon lemon juice",
+      "1/2 teaspoon garlic powder",
+      "Optional: plain yogurt or crumbled cheese",
+    ],
+    steps: [
+      "Cook the rice and lentils according to their package directions if they are not already prepared.",
+      "Cook, roast, or steam the vegetables until tender.",
+      "Whisk the olive oil, lemon juice, and garlic powder together in a small bowl.",
+      "Divide the rice and lentils into bowls.",
+      "Add the cooked vegetables.",
+      "Spoon the lemon dressing over the bowls.",
+      "Add yogurt or crumbled cheese if you want.",
+    ],
+    tips: [
+      "Canned lentils can save time; drain and rinse them before using.",
+      "This is easy to prepare in a larger batch for later meals.",
+    ],
+  },
+  {
+    title: "Chicken Sandwich & Fruit",
+    emoji: "🥪",
+    categories: ["Lunch", "Quick"],
+    workoutGoals: ["muscle", "strength", "endurance", "consistency"],
+    timing: ["Before Workout", "After Workout"],
+    prepTime: "8 min",
+    cookTime: "No cooking with pre-cooked chicken",
+    servings: "1 serving",
+    summary: "A simple sandwich using cooked chicken, whole-grain bread, vegetables, and fruit.",
+    ingredients: [
+      "2 slices whole-grain bread",
+      "3 to 4 ounces cooked chicken, sliced",
+      "Lettuce or spinach",
+      "Tomato slices",
+      "1 slice cheese, optional",
+      "Mustard or another sandwich spread",
+      "1 piece of fruit",
+    ],
+    steps: [
+      "Place the bread slices on a clean plate.",
+      "Spread a small amount of mustard or your preferred spread on the bread.",
+      "Add the cooked chicken, lettuce or spinach, tomato, and cheese if using.",
+      "Close the sandwich and cut it in half.",
+      "Wash the fruit and serve it on the side.",
+    ],
+    tips: [
+      "This works well with leftover cooked chicken.",
+      "Keep cooked chicken refrigerated until you are ready to make the sandwich.",
+    ],
+  },
+  {
+    title: "Egg Fried Rice with Vegetables",
+    emoji: "🍳",
+    categories: ["Lunch", "Dinner", "Quick", "Vegetarian"],
+    workoutGoals: ["strength", "endurance", "consistency", "mobility"],
+    timing: ["After Workout"],
+    prepTime: "8 min",
+    cookTime: "12 min",
+    servings: "2 servings",
+    summary: "A fast way to turn cooked rice, eggs, and vegetables into a complete meal.",
+    ingredients: [
+      "2 cups cooked and cooled rice",
+      "2 eggs",
+      "2 cups mixed vegetables",
+      "1 tablespoon cooking oil",
+      "1 to 2 tablespoons low-sodium soy sauce",
+      "Optional: green onion",
+    ],
+    steps: [
+      "Heat half of the oil in a large pan over medium heat.",
+      "Crack in the eggs and scramble them until fully cooked.",
+      "Move the eggs to a clean plate.",
+      "Add the remaining oil and vegetables to the pan and cook until tender.",
+      "Add the cooked rice and stir until it is hot throughout.",
+      "Return the eggs to the pan.",
+      "Add soy sauce and stir everything together.",
+      "Top with green onion if you like.",
+    ],
+    tips: [
+      "Cold leftover rice works especially well because it is less sticky.",
+      "You can add cooked chicken, tofu, or another protein if you want.",
+    ],
+  },
+  {
+    title: "Fruit Yogurt Smoothie",
+    emoji: "🥤",
+    categories: ["Breakfast", "Snack", "Vegetarian", "Quick"],
+    workoutGoals: ["endurance", "consistency", "muscle", "strength", "mobility"],
+    timing: ["Before Workout", "After Workout"],
+    prepTime: "5 min",
+    cookTime: "No cooking",
+    servings: "1 serving",
+    summary: "A quick smoothie with fruit, yogurt, milk, and oats.",
+    ingredients: [
+      "1 banana",
+      "1 cup frozen or fresh berries",
+      "3/4 cup yogurt",
+      "3/4 cup milk or fortified non-dairy milk",
+      "1/4 cup oats",
+      "Optional: 1 tablespoon peanut or seed butter",
+    ],
+    steps: [
+      "Add the milk to the blender first.",
+      "Add yogurt, banana, berries, and oats.",
+      "Add peanut or seed butter if using.",
+      "Blend until smooth.",
+      "If the smoothie is too thick, add a small splash of milk and blend again.",
+      "Pour into a glass and drink soon after blending.",
+    ],
+    tips: [
+      "Use frozen fruit for a colder, thicker smoothie.",
+      "If you are eating before exercise, adjust the size based on what feels comfortable.",
     ],
   },
 ];
@@ -339,7 +761,10 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState(300);
   const [timerRunning, setTimerRunning] = useState(false);
   const [mealCategory, setMealCategory] = useState<MealCategory>("All");
+  const [mealTiming, setMealTiming] = useState<MealTiming>("Anytime");
   const [mealSearch, setMealSearch] = useState("");
+  const [recommendedMealsOnly, setRecommendedMealsOnly] = useState(true);
+  const [expandedMeal, setExpandedMeal] = useState<string | null>(null);
   const [workoutHistory, setWorkoutHistory] = useState<WorkoutHistoryItem[]>([]);
   const [exerciseCategory, setExerciseCategory] = useState<ExerciseCategory>("All");
   const [exerciseSearch, setExerciseSearch] = useState("");
@@ -882,23 +1307,64 @@ export default function App() {
     });
   }, [exerciseCategory, exerciseSearch]);
 
+  const mealGoalLabel =
+    goal === "muscle"
+      ? "Build Muscle"
+      : goal === "strength"
+      ? "Build Strength"
+      : goal === "endurance"
+      ? "Improve Endurance"
+      : goal === "mobility"
+      ? "Mobility & Recovery"
+      : "Stay Consistent";
+
   const filteredMeals = useMemo(() => {
     const query = mealSearch.trim().toLowerCase();
 
-    return MEALS.filter((meal) => {
+    const matches = MEALS.filter((meal) => {
       const categoryMatch =
-        mealCategory === "All" || meal.category === mealCategory;
+        mealCategory === "All" || meal.categories.includes(mealCategory);
 
-      const searchMatch =
-        !query ||
-        meal.title.toLowerCase().includes(query) ||
-        meal.ingredients.some((ingredient) =>
-          ingredient.toLowerCase().includes(query)
-        );
+      const timingMatch =
+        mealTiming === "Anytime" || meal.timing.includes(mealTiming);
 
-      return categoryMatch && searchMatch;
+      const goalMatch = !goal || meal.workoutGoals.includes(goal);
+
+      const searchableText = [
+        meal.title,
+        meal.summary,
+        ...meal.ingredients,
+        ...meal.categories,
+        ...meal.timing,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      const searchMatch = !query || searchableText.includes(query);
+
+      return (
+        categoryMatch &&
+        timingMatch &&
+        searchMatch &&
+        (!recommendedMealsOnly || goalMatch)
+      );
     });
-  }, [mealCategory, mealSearch]);
+
+    return matches.sort((a, b) => {
+      if (!goal) return 0;
+
+      const aMatch = a.workoutGoals.includes(goal) ? 1 : 0;
+      const bMatch = b.workoutGoals.includes(goal) ? 1 : 0;
+
+      return bMatch - aMatch;
+    });
+  }, [
+    mealCategory,
+    mealTiming,
+    mealSearch,
+    recommendedMealsOnly,
+    goal,
+  ]);
 
   const finishWorkout = () => {
     if (completedSets.length > 0) {
@@ -1413,20 +1879,95 @@ export default function App() {
           </TouchableOpacity>
 
           <Text style={styles.workoutScreenLabel}>Z MEALS</Text>
-          <Text style={styles.mealsTitle}>Simple meal ideas</Text>
+          <Text style={styles.mealsTitle}>Workout meals made easy</Text>
           <Text style={styles.mealsSubtitle}>
-            Balanced ideas for energy, recovery, and variety. Pick what sounds good
-            and works with what you have.
+            Search by food, ingredient, or meal type. Open any meal to see the
+            complete ingredients and cooking instructions.
           </Text>
+
+          <View style={styles.mealPlanCard}>
+            <View style={styles.mealPlanTopRow}>
+              <View style={styles.mealPlanTextWrap}>
+                <Text style={styles.mealPlanLabel}>YOUR Z PLAN</Text>
+                <Text style={styles.mealPlanTitle}>{mealGoalLabel}</Text>
+                <Text style={styles.mealPlanText}>
+                  Recipes that match your workout goal appear first.
+                </Text>
+              </View>
+              <Text style={styles.mealPlanEmoji}>⚡</Text>
+            </View>
+
+            <View style={styles.mealModeRow}>
+              <TouchableOpacity
+                style={[
+                  styles.mealModeButton,
+                  recommendedMealsOnly && styles.mealModeButtonActive,
+                ]}
+                onPress={() => setRecommendedMealsOnly(true)}
+              >
+                <Text
+                  style={[
+                    styles.mealModeText,
+                    recommendedMealsOnly && styles.mealModeTextActive,
+                  ]}
+                >
+                  FOR MY PLAN
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.mealModeButton,
+                  !recommendedMealsOnly && styles.mealModeButtonActive,
+                ]}
+                onPress={() => setRecommendedMealsOnly(false)}
+              >
+                <Text
+                  style={[
+                    styles.mealModeText,
+                    !recommendedMealsOnly && styles.mealModeTextActive,
+                  ]}
+                >
+                  ALL MEALS
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           <TextInput
             value={mealSearch}
             onChangeText={setMealSearch}
-            placeholder="Search chicken, rice, eggs..."
+            placeholder="Search chicken, rice, pasta, banana..."
             placeholderTextColor="#5D5D5D"
             style={styles.mealSearch}
           />
 
+          <Text style={styles.mealFilterLabel}>WHEN DO YOU WANT IT?</Text>
+          <View style={styles.mealTimingRow}>
+            {(["Anytime", "Before Workout", "After Workout"] as MealTiming[]).map(
+              (timing) => (
+                <TouchableOpacity
+                  key={timing}
+                  style={[
+                    styles.mealTimingButton,
+                    mealTiming === timing && styles.mealTimingButtonActive,
+                  ]}
+                  onPress={() => setMealTiming(timing)}
+                >
+                  <Text
+                    style={[
+                      styles.mealTimingText,
+                      mealTiming === timing && styles.mealTimingTextActive,
+                    ]}
+                  >
+                    {timing}
+                  </Text>
+                </TouchableOpacity>
+              )
+            )}
+          </View>
+
+          <Text style={styles.mealFilterLabel}>MEAL TYPE</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -1463,56 +2004,137 @@ export default function App() {
             ))}
           </ScrollView>
 
+          <Text style={styles.mealResultsText}>
+            {filteredMeals.length} recipe{filteredMeals.length === 1 ? "" : "s"}
+          </Text>
+
           {filteredMeals.length === 0 ? (
             <View style={styles.mealEmptyCard}>
               <Text style={styles.mealEmptyTitle}>No matches yet</Text>
               <Text style={styles.mealEmptyText}>
-                Try another ingredient or choose All.
+                Try another ingredient, choose Anytime, or switch to All Meals.
               </Text>
             </View>
           ) : (
-            filteredMeals.map((meal) => (
-              <View key={meal.title} style={styles.mealCard}>
-                <View style={styles.mealCardHeader}>
-                  <Text style={styles.mealEmoji}>{meal.emoji}</Text>
-                  <View style={styles.mealCardTitleWrap}>
-                    <Text style={styles.mealCardTitle}>{meal.title}</Text>
-                    <Text style={styles.mealMeta}>
-                      {meal.category} • {meal.time}
+            filteredMeals.map((meal) => {
+              const expanded = expandedMeal === meal.title;
+              const isRecommended = !!goal && meal.workoutGoals.includes(goal);
+
+              return (
+                <TouchableOpacity
+                  key={meal.title}
+                  activeOpacity={0.86}
+                  style={[
+                    styles.mealCard,
+                    expanded && styles.mealCardExpanded,
+                  ]}
+                  onPress={() => setExpandedMeal(expanded ? null : meal.title)}
+                >
+                  <View style={styles.mealCardHeader}>
+                    <View style={styles.mealEmojiBox}>
+                      <Text style={styles.mealEmoji}>{meal.emoji}</Text>
+                    </View>
+
+                    <View style={styles.mealCardTitleWrap}>
+                      <Text style={styles.mealCardTitle}>{meal.title}</Text>
+                      <Text style={styles.mealMeta}>
+                        {meal.prepTime} prep • {meal.cookTime} cook • {meal.servings}
+                      </Text>
+                    </View>
+
+                    <Text style={styles.mealExpandIcon}>
+                      {expanded ? "−" : "+"}
                     </Text>
                   </View>
-                </View>
 
-                <Text style={styles.mealSectionLabel}>INGREDIENTS</Text>
-                <Text style={styles.mealIngredients}>
-                  {meal.ingredients.join(" • ")}
-                </Text>
-
-                <Text style={styles.mealSectionLabel}>MAKE IT</Text>
-                {meal.steps.map((item, index) => (
-                  <View key={`${meal.title}-${index}`} style={styles.mealStepRow}>
-                    <View style={styles.mealStepNumber}>
-                      <Text style={styles.mealStepNumberText}>{index + 1}</Text>
+                  {isRecommended && (
+                    <View style={styles.mealRecommendedBadge}>
+                      <Text style={styles.mealRecommendedText}>
+                        ✓ Fits your {mealGoalLabel} plan
+                      </Text>
                     </View>
-                    <Text style={styles.mealStepText}>{item}</Text>
+                  )}
+
+                  <Text style={styles.mealSummary}>{meal.summary}</Text>
+
+                  <View style={styles.mealTagRow}>
+                    {meal.timing.map((timing) => (
+                      <View key={timing} style={styles.mealTag}>
+                        <Text style={styles.mealTagText}>{timing}</Text>
+                      </View>
+                    ))}
+                    {meal.categories.slice(0, 2).map((category) => (
+                      <View key={category} style={styles.mealTag}>
+                        <Text style={styles.mealTagText}>{category}</Text>
+                      </View>
+                    ))}
                   </View>
-                ))}
-              </View>
-            ))
+
+                  <Text style={styles.mealTapHint}>
+                    {expanded ? "Tap to close recipe" : "Tap for full recipe"}
+                  </Text>
+
+                  {expanded && (
+                    <View style={styles.mealFullRecipe}>
+                      <Text style={styles.mealSectionLabel}>INGREDIENTS</Text>
+                      {meal.ingredients.map((ingredient, index) => (
+                        <View
+                          key={`${meal.title}-ingredient-${index}`}
+                          style={styles.mealIngredientRow}
+                        >
+                          <Text style={styles.mealIngredientBullet}>•</Text>
+                          <Text style={styles.mealIngredientText}>
+                            {ingredient}
+                          </Text>
+                        </View>
+                      ))}
+
+                      <Text style={styles.mealSectionLabel}>
+                        STEP-BY-STEP PREPARATION
+                      </Text>
+                      {meal.steps.map((item, index) => (
+                        <View
+                          key={`${meal.title}-step-${index}`}
+                          style={styles.mealStepRow}
+                        >
+                          <View style={styles.mealStepNumber}>
+                            <Text style={styles.mealStepNumberText}>
+                              {index + 1}
+                            </Text>
+                          </View>
+                          <Text style={styles.mealStepText}>{item}</Text>
+                        </View>
+                      ))}
+
+                      <Text style={styles.mealSectionLabel}>HELPFUL TIPS</Text>
+                      {meal.tips.map((tip, index) => (
+                        <View
+                          key={`${meal.title}-tip-${index}`}
+                          style={styles.mealTipRow}
+                        >
+                          <Text style={styles.mealTipIcon}>✓</Text>
+                          <Text style={styles.mealTipText}>{tip}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })
           )}
 
           <View style={styles.mealNote}>
-            <Text style={styles.mealNoteTitle}>Food should support your day</Text>
+            <Text style={styles.mealNoteTitle}>Balanced, not restrictive</Text>
             <Text style={styles.mealNoteText}>
-              Z Meals focuses on balanced choices and variety instead of strict
-              dieting or skipping meals.
+              Z Meals helps you find practical food for training, recovery, and
+              everyday energy. It does not require skipping meals or chasing a
+              specific body shape.
             </Text>
           </View>
         </ScrollView>
       </SafeAreaView>
     );
   }
-
 
   if (step === 8) {
     return (
@@ -2897,7 +3519,84 @@ const styles = StyleSheet.create({
     color: COLORS.muted,
     lineHeight: 21,
     marginTop: 9,
-    marginBottom: 20,
+    marginBottom: 18,
+  },
+
+  mealPlanCard: {
+    backgroundColor: "#10160C",
+    borderWidth: 1,
+    borderColor: "#2E4516",
+    borderRadius: 20,
+    padding: 17,
+    marginBottom: 16,
+  },
+
+  mealPlanTopRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+
+  mealPlanTextWrap: {
+    flex: 1,
+  },
+
+  mealPlanLabel: {
+    color: COLORS.green,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
+  mealPlanTitle: {
+    color: COLORS.white,
+    fontSize: 20,
+    fontWeight: "900",
+    marginTop: 5,
+  },
+
+  mealPlanText: {
+    color: COLORS.muted,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 4,
+  },
+
+  mealPlanEmoji: {
+    fontSize: 26,
+    marginLeft: 12,
+  },
+
+  mealModeRow: {
+    flexDirection: "row",
+    gap: 9,
+    marginTop: 15,
+  },
+
+  mealModeButton: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
+
+  mealModeButtonActive: {
+    backgroundColor: COLORS.green,
+    borderColor: COLORS.green,
+  },
+
+  mealModeText: {
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: "900",
+  },
+
+  mealModeTextActive: {
+    color: COLORS.background,
   },
 
   mealSearch: {
@@ -2909,12 +3608,54 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    marginBottom: 15,
+    marginBottom: 16,
+  },
+
+  mealFilterLabel: {
+    color: COLORS.muted,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+    marginBottom: 9,
+  },
+
+  mealTimingRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 17,
+  },
+
+  mealTimingButton: {
+    flex: 1,
+    minHeight: 43,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+  },
+
+  mealTimingButtonActive: {
+    borderColor: COLORS.green,
+    backgroundColor: "#151A0D",
+  },
+
+  mealTimingText: {
+    color: COLORS.muted,
+    fontSize: 11,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+
+  mealTimingTextActive: {
+    color: COLORS.green,
   },
 
   mealCategoryRow: {
     gap: 9,
-    paddingBottom: 20,
+    paddingBottom: 13,
   },
 
   mealCategoryChip: {
@@ -2941,24 +3682,43 @@ const styles = StyleSheet.create({
     color: COLORS.background,
   },
 
+  mealResultsText: {
+    color: COLORS.muted,
+    fontSize: 12,
+    marginBottom: 11,
+  },
+
   mealCard: {
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 22,
-    padding: 18,
-    marginBottom: 15,
+    padding: 17,
+    marginBottom: 13,
+  },
+
+  mealCardExpanded: {
+    borderColor: "#3A4F15",
+    backgroundColor: "#10140C",
   },
 
   mealCardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 17,
+  },
+
+  mealEmojiBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 15,
+    backgroundColor: COLORS.cardSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
   },
 
   mealEmoji: {
-    fontSize: 34,
-    marginRight: 13,
+    fontSize: 27,
   },
 
   mealCardTitleWrap: {
@@ -2967,14 +3727,78 @@ const styles = StyleSheet.create({
 
   mealCardTitle: {
     color: COLORS.white,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "900",
   },
 
   mealMeta: {
     color: COLORS.muted,
-    fontSize: 13,
-    marginTop: 3,
+    fontSize: 11,
+    marginTop: 4,
+  },
+
+  mealExpandIcon: {
+    color: COLORS.green,
+    fontSize: 25,
+    fontWeight: "700",
+    marginLeft: 10,
+  },
+
+  mealRecommendedBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#17200C",
+    borderWidth: 1,
+    borderColor: "#2E4516",
+    borderRadius: 30,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: 13,
+  },
+
+  mealRecommendedText: {
+    color: COLORS.green,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+
+  mealSummary: {
+    color: COLORS.muted,
+    lineHeight: 20,
+    marginTop: 12,
+  },
+
+  mealTagRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+    marginTop: 12,
+  },
+
+  mealTag: {
+    backgroundColor: COLORS.cardSoft,
+    borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+  },
+
+  mealTagText: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: "700",
+  },
+
+  mealTapHint: {
+    color: COLORS.green,
+    fontSize: 11,
+    fontWeight: "800",
+    marginTop: 13,
+  },
+
+  mealFullRecipe: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    marginTop: 15,
+    paddingTop: 12,
   },
 
   mealSectionLabel: {
@@ -2982,34 +3806,46 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "900",
     letterSpacing: 1,
-    marginTop: 8,
+    marginTop: 10,
+    marginBottom: 9,
+  },
+
+  mealIngredientRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
     marginBottom: 7,
   },
 
-  mealIngredients: {
+  mealIngredientBullet: {
+    color: COLORS.green,
+    width: 18,
+    fontWeight: "900",
+  },
+
+  mealIngredientText: {
+    flex: 1,
     color: COLORS.white,
-    lineHeight: 21,
-    marginBottom: 8,
+    lineHeight: 20,
   },
 
   mealStepRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 10,
+    marginBottom: 11,
   },
 
   mealStepNumber: {
-    width: 26,
-    height: 26,
+    width: 28,
+    height: 28,
     borderRadius: 9,
-    backgroundColor: COLORS.cardSoft,
+    backgroundColor: COLORS.green,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 10,
   },
 
   mealStepNumberText: {
-    color: COLORS.green,
+    color: COLORS.background,
     fontWeight: "900",
     fontSize: 12,
   },
@@ -3018,6 +3854,25 @@ const styles = StyleSheet.create({
     flex: 1,
     color: COLORS.muted,
     lineHeight: 20,
+    paddingTop: 2,
+  },
+
+  mealTipRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
+
+  mealTipIcon: {
+    color: COLORS.green,
+    fontWeight: "900",
+    width: 22,
+  },
+
+  mealTipText: {
+    flex: 1,
+    color: COLORS.muted,
+    lineHeight: 19,
   },
 
   mealEmptyCard: {
@@ -3038,6 +3893,7 @@ const styles = StyleSheet.create({
   mealEmptyText: {
     color: COLORS.muted,
     marginTop: 5,
+    lineHeight: 19,
   },
 
   mealNote: {
