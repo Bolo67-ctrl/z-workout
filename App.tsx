@@ -27,6 +27,14 @@ type WorkoutExercise = {
   cue: string;
 };
 
+type WorkoutPlanSession = {
+  id: string;
+  title: string;
+  focus: string;
+  emoji: string;
+  exercises: WorkoutExercise[];
+};
+
 type SetLog = {
   reps: string;
   weight: string;
@@ -1296,6 +1304,236 @@ export default function App() {
     return exercises.slice(0, maxExercises);
   }, [goal, equipment, workoutPlace, workoutLength]);
 
+  const weeklySessions = useMemo<WorkoutPlanSession[]>(() => {
+    const limitForTime = (items: WorkoutExercise[]) => {
+      const maxExercises =
+        workoutLength === "15 min"
+          ? 4
+          : workoutLength === "30 min"
+          ? 5
+          : workoutLength === "45 min"
+          ? 6
+          : 7;
+
+      return items.slice(0, maxExercises);
+    };
+
+    let templates: Omit<WorkoutPlanSession, "id">[];
+
+    if (goal === "mobility") {
+      templates = [
+        {
+          title: "Mobility Reset",
+          focus: "Full-body mobility",
+          emoji: "🧘",
+          exercises: [
+            { name: "Cat-Cow", target: "2 × 6–8 slow reps", focus: "Spine", cue: "Move slowly through a comfortable range." },
+            { name: "Shoulder Wall Slides", target: "2 × 8–10", focus: "Shoulders", cue: "Do not force your arms higher." },
+            { name: "Bodyweight Squat Hold", target: "2 × 20–30 sec", focus: "Hips + ankles", cue: "Hold support if that feels better." },
+            { name: "Bird Dog", target: "2 × 6–8 each side", focus: "Core + back", cue: "Move slowly without twisting." },
+            { name: "Glute Bridge", target: "2 × 10–12", focus: "Hips", cue: "Use a smooth comfortable range." },
+            { name: "Dead Bug", target: "2 × 6–8 each side", focus: "Core", cue: "Keep the movement controlled." },
+          ],
+        },
+        {
+          title: "Hips & Core Flow",
+          focus: "Hips, legs, and core",
+          emoji: "🌿",
+          exercises: [
+            { name: "Glute Bridge", target: "2 × 10–12", focus: "Hips", cue: "Pause briefly at the top." },
+            { name: "Reverse Lunges", target: "2 × 6 each side", focus: "Hips + legs", cue: "Use support if you need balance." },
+            { name: "Dead Bug", target: "2 × 6–8 each side", focus: "Core", cue: "Move slowly and stay comfortable." },
+            { name: "Bird Dog", target: "2 × 6–8 each side", focus: "Core + back", cue: "Reach without twisting." },
+            { name: "Cat-Cow", target: "2 × 6–8 slow reps", focus: "Spine", cue: "Keep the motion gentle." },
+          ],
+        },
+        {
+          title: "Upper Mobility Flow",
+          focus: "Shoulders, upper back, and core",
+          emoji: "✨",
+          exercises: [
+            { name: "Shoulder Wall Slides", target: "2 × 8–10", focus: "Shoulders", cue: "Use a comfortable range." },
+            { name: "Cat-Cow", target: "2 × 6–8 slow reps", focus: "Spine", cue: "Move slowly." },
+            { name: "Bird Dog", target: "2 × 6–8 each side", focus: "Back + core", cue: "Keep your torso steady." },
+            { name: "Dead Bug", target: "2 × 6–8 each side", focus: "Core", cue: "Stay controlled." },
+            { name: "Glute Bridge", target: "2 × 10–12", focus: "Hips", cue: "Use a smooth range." },
+          ],
+        },
+      ];
+    } else if (
+      equipment.includes("Dumbbells") ||
+      equipment.includes("Kettlebell")
+    ) {
+      templates = [
+        {
+          title: "Full Body A",
+          focus: "Squat, push, pull, core",
+          emoji: "🏋️",
+          exercises: [
+            { name: "Goblet Squat", target: "3 × 8–12", focus: "Legs", cue: "Use a manageable weight and controlled reps." },
+            { name: "One-Arm Row", target: "3 × 8–12 each side", focus: "Back", cue: "Keep your torso steady." },
+            { name: "Floor Press", target: "3 × 8–12", focus: "Chest", cue: "Control every rep." },
+            { name: "Glute Bridges", target: "2 × 10–15", focus: "Hips", cue: "Pause briefly at the top." },
+            { name: "Dead Bug", target: "2 × 8 each side", focus: "Core", cue: "Move slowly." },
+            { name: "Calf Raises", target: "2 × 12–15", focus: "Calves", cue: "Use support for balance." },
+          ],
+        },
+        {
+          title: "Full Body B",
+          focus: "Hinge, shoulders, legs, core",
+          emoji: "⚡",
+          exercises: [
+            { name: "Romanian Deadlift", target: "2–3 × 8–12", focus: "Hamstrings", cue: "Keep the weight close and use a comfortable range." },
+            { name: "Standing Shoulder Press", target: "2 × 8–10", focus: "Shoulders", cue: "Avoid leaning back." },
+            { name: "Reverse Lunges", target: "2 × 8 each side", focus: "Legs", cue: "Use support if needed." },
+            { name: "One-Arm Row", target: "2 × 8–12 each side", focus: "Back", cue: "Keep the movement smooth." },
+            { name: "Bird Dog", target: "2 × 8 each side", focus: "Core + back", cue: "Do not twist." },
+            { name: "Glute Bridges", target: "2 × 10–15", focus: "Hips", cue: "Move smoothly." },
+          ],
+        },
+        {
+          title: "Balanced Strength Day",
+          focus: "Full-body technique",
+          emoji: "💪",
+          exercises: [
+            { name: "Goblet Squat", target: "2–3 × 8–12", focus: "Legs", cue: "Choose a weight you can control." },
+            { name: "Floor Press", target: "2–3 × 8–12", focus: "Chest", cue: "Keep each rep smooth." },
+            { name: "One-Arm Row", target: "2–3 × 8–12 each side", focus: "Back", cue: "Keep your torso steady." },
+            { name: "Romanian Deadlift", target: "2 × 8–12", focus: "Hamstrings", cue: "Use a comfortable range." },
+            { name: "Dead Bug", target: "2 × 8 each side", focus: "Core", cue: "Slow and controlled." },
+          ],
+        },
+      ];
+    } else if (workoutPlace === "gym") {
+      templates = [
+        {
+          title: "Gym Full Body A",
+          focus: "Legs, chest, back, core",
+          emoji: "🏋️",
+          exercises: [
+            { name: "Leg Press", target: "3 × 8–12", focus: "Legs", cue: "Use a comfortable range and controlled reps." },
+            { name: "Chest Press Machine", target: "3 × 8–12", focus: "Chest", cue: "Set the seat comfortably." },
+            { name: "Lat Pulldown", target: "3 × 8–12", focus: "Back", cue: "Pull smoothly without swinging." },
+            { name: "Seated Leg Curl", target: "2 × 10–12", focus: "Hamstrings", cue: "Keep the movement controlled." },
+            { name: "Dead Bug", target: "2 × 8 each side", focus: "Core", cue: "Move slowly." },
+            { name: "Calf Raises", target: "2 × 12–15", focus: "Calves", cue: "Use support if needed." },
+          ],
+        },
+        {
+          title: "Gym Full Body B",
+          focus: "Back, shoulders, legs, core",
+          emoji: "⚙️",
+          exercises: [
+            { name: "Cable Row", target: "3 × 8–12", focus: "Back", cue: "Sit tall and avoid jerking the weight." },
+            { name: "Machine Shoulder Press", target: "2 × 8–10", focus: "Shoulders", cue: "Use a load you can control." },
+            { name: "Leg Press", target: "2–3 × 10–12", focus: "Legs", cue: "Keep the movement smooth." },
+            { name: "Chest Press Machine", target: "2 × 8–12", focus: "Chest", cue: "Use a comfortable range." },
+            { name: "Bird Dog", target: "2 × 8 each side", focus: "Core + back", cue: "Move slowly." },
+          ],
+        },
+        {
+          title: "Gym Technique Day",
+          focus: "Balanced full-body practice",
+          emoji: "🎯",
+          exercises: [
+            { name: "Lat Pulldown", target: "2 × 8–12", focus: "Back", cue: "Pull smoothly." },
+            { name: "Leg Press", target: "2 × 8–12", focus: "Legs", cue: "Use a comfortable range." },
+            { name: "Chest Press Machine", target: "2 × 8–12", focus: "Chest", cue: "Control each rep." },
+            { name: "Machine Shoulder Press", target: "2 × 8–10", focus: "Shoulders", cue: "Do not force the range." },
+            { name: "Dead Bug", target: "2 × 8 each side", focus: "Core", cue: "Keep it controlled." },
+          ],
+        },
+      ];
+    } else if (equipment.includes("Push-Up Board")) {
+      templates = [
+        {
+          title: "Board Full Body A",
+          focus: "Chest, legs, core",
+          emoji: "🟩",
+          exercises: [
+            { name: "Push-Up Board Chest Press", target: "3 × 8–12", focus: "Chest", cue: "Use a comfortable handle position." },
+            { name: "Bodyweight Squats", target: "3 × 10–15", focus: "Legs", cue: "Use a comfortable depth." },
+            { name: "Glute Bridges", target: "2 × 10–15", focus: "Hips", cue: "Pause briefly at the top." },
+            { name: "Dead Bug", target: "2 × 8 each side", focus: "Core", cue: "Move slowly." },
+            { name: "Calf Raises", target: "2 × 12–15", focus: "Calves", cue: "Use support for balance." },
+          ],
+        },
+        {
+          title: "Board Full Body B",
+          focus: "Arms, legs, balance, core",
+          emoji: "💪",
+          exercises: [
+            { name: "Push-Up Board Triceps", target: "2–3 × 8–12", focus: "Arms", cue: "Keep your body controlled." },
+            { name: "Reverse Lunges", target: "2 × 8 each side", focus: "Legs", cue: "Use support if needed." },
+            { name: "Push-Up Board Chest Press", target: "2 × 8–12", focus: "Chest", cue: "Use a comfortable board setup." },
+            { name: "Bird Dog", target: "2 × 8 each side", focus: "Core + back", cue: "Move slowly without twisting." },
+            { name: "Glute Bridges", target: "2 × 10–15", focus: "Hips", cue: "Move smoothly." },
+          ],
+        },
+        {
+          title: "Board Technique Day",
+          focus: "Full-body control",
+          emoji: "🎯",
+          exercises: workoutExercises,
+        },
+      ];
+    } else {
+      templates = [
+        {
+          title: "Bodyweight Full Body A",
+          focus: "Squat, push, hips, core",
+          emoji: "🏠",
+          exercises: [
+            { name: "Bodyweight Squats", target: "3 × 10–15", focus: "Legs", cue: "Use a comfortable depth." },
+            { name: "Push-Ups", target: "2–3 × 6–12", focus: "Chest + arms", cue: "Choose a version that feels manageable." },
+            { name: "Glute Bridges", target: "3 × 10–15", focus: "Hips", cue: "Pause briefly at the top." },
+            { name: "Bird Dog", target: "2 × 8 each side", focus: "Core + back", cue: "Move slowly." },
+            { name: "Calf Raises", target: "2 × 12–15", focus: "Calves", cue: "Use support for balance." },
+          ],
+        },
+        {
+          title: "Bodyweight Full Body B",
+          focus: "Legs, balance, push, core",
+          emoji: "⚡",
+          exercises: [
+            { name: "Reverse Lunges", target: "2 × 8 each side", focus: "Legs", cue: "Use support if needed." },
+            { name: "Push-Ups", target: "2 × 6–12", focus: "Chest + arms", cue: "Use an easier variation if needed." },
+            { name: "Glute Bridges", target: "2 × 10–15", focus: "Hips", cue: "Move smoothly." },
+            { name: "Dead Bug", target: "2 × 8 each side", focus: "Core", cue: "Keep the movement controlled." },
+            { name: "Bodyweight Squats", target: "2 × 10–15", focus: "Legs", cue: "Keep the reps steady." },
+          ],
+        },
+        {
+          title: "Bodyweight Technique Day",
+          focus: "Full-body control",
+          emoji: "🎯",
+          exercises: workoutExercises,
+        },
+      ];
+    }
+
+    const count = trainingDays ?? 3;
+
+    return Array.from({ length: count }, (_, index) => {
+      const template = templates[index % templates.length];
+
+      return {
+        id: `session-${index + 1}`,
+        title: template.title,
+        focus: template.focus,
+        emoji: template.emoji,
+        exercises: limitForTime(template.exercises),
+      };
+    });
+  }, [
+    goal,
+    equipment,
+    workoutPlace,
+    workoutLength,
+    trainingDays,
+    workoutExercises,
+  ]);
+
   const activeExercises = sessionExercises ?? workoutExercises;
   const activeWorkoutTitle = sessionTitle ?? todayWorkout;
   const activeWorkoutLength = sessionLength ?? workoutLength;
@@ -1405,6 +1643,22 @@ export default function App() {
     setSessionExercises(null);
     setSessionTitle(null);
     setSessionLength(null);
+    setCompletedSets([]);
+    setSetLogs({});
+    setCurrentExerciseIndex(0);
+    setCurrentSetIndex(0);
+    setTimerPhase("work");
+    setTimeLeft(firstExercise ? getWorkWindow(firstExercise) : 300);
+    setTimerRunning(true);
+    setStep(6);
+  };
+
+  const startPlanSession = (session: WorkoutPlanSession) => {
+    const firstExercise = session.exercises[0];
+
+    setSessionExercises(session.exercises);
+    setSessionTitle(session.title);
+    setSessionLength(workoutLength);
     setCompletedSets([]);
     setSetLogs({});
     setCurrentExerciseIndex(0);
@@ -2113,6 +2367,108 @@ export default function App() {
           </TouchableOpacity>
 
           <BackButton onPress={() => setStep(3)} />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (step === 13) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+
+        <ScrollView
+          contentContainerStyle={styles.workoutPlanScreen}
+          showsVerticalScrollIndicator={false}
+        >
+          <TouchableOpacity onPress={() => setStep(5)}>
+            <Text style={styles.workoutBack}>‹ Back home</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.workoutScreenLabel}>YOUR WORKOUTS</Text>
+          <Text style={styles.workoutPlanTitle}>Your weekly plan</Text>
+          <Text style={styles.workoutPlanSubtitle}>
+            {trainingDays ?? "-"} planned sessions • {workoutLength ?? "-"} each.
+            Pick a session when you are ready. Rest days can go between them.
+          </Text>
+
+          <View style={styles.workoutPlanOverview}>
+            <View style={styles.workoutPlanOverviewText}>
+              <Text style={styles.workoutPlanOverviewLabel}>CURRENT PLAN</Text>
+              <Text style={styles.workoutPlanOverviewTitle}>{todayWorkout}</Text>
+              <Text style={styles.workoutPlanOverviewMeta}>{planDescription}</Text>
+            </View>
+            <Text style={styles.workoutPlanOverviewEmoji}>⚡</Text>
+          </View>
+
+          <View style={styles.workoutPlanProgressRow}>
+            <Text style={styles.workoutPlanProgressText}>
+              {completedWorkouts}/{trainingDays ?? "-"} completed this week
+            </Text>
+            <Text style={styles.workoutPlanProgressPercent}>
+              {weeklyProgressPercent}%
+            </Text>
+          </View>
+
+          <View style={styles.workoutPlanBar}>
+            <View
+              style={[
+                styles.workoutPlanBarFill,
+                { width: `${weeklyProgressPercent}%` },
+              ]}
+            />
+          </View>
+
+          <Text style={styles.workoutPlanSectionTitle}>Planned sessions</Text>
+
+          {weeklySessions.map((session, index) => (
+            <View key={session.id} style={styles.workoutPlanCard}>
+              <View style={styles.workoutPlanCardHeader}>
+                <View style={styles.workoutPlanIcon}>
+                  <Text style={styles.workoutPlanIconText}>{session.emoji}</Text>
+                </View>
+
+                <View style={styles.workoutPlanCardTitleWrap}>
+                  <Text style={styles.workoutPlanDay}>SESSION {index + 1}</Text>
+                  <Text style={styles.workoutPlanCardTitle}>{session.title}</Text>
+                  <Text style={styles.workoutPlanCardMeta}>
+                    {session.focus} • {session.exercises.length} exercises
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.workoutPlanExercisePreview}>
+                {session.exercises.slice(0, 4).map((exercise) => (
+                  <Text
+                    key={`${session.id}-${exercise.name}`}
+                    style={styles.workoutPlanExerciseText}
+                  >
+                    • {exercise.name}
+                  </Text>
+                ))}
+                {session.exercises.length > 4 && (
+                  <Text style={styles.workoutPlanMoreText}>
+                    + {session.exercises.length - 4} more
+                  </Text>
+                )}
+              </View>
+
+              <TouchableOpacity
+                style={styles.workoutPlanStartButton}
+                onPress={() => startPlanSession(session)}
+              >
+                <Text style={styles.workoutPlanStartText}>START SESSION</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+
+          <View style={styles.workoutPlanNote}>
+            <Text style={styles.workoutPlanNoteTitle}>Keep it flexible</Text>
+            <Text style={styles.workoutPlanNoteText}>
+              You do not need to complete sessions on consecutive days. Use Z
+              Coach when you need a shorter, no-equipment, or recovery option.
+            </Text>
+          </View>
         </ScrollView>
       </SafeAreaView>
     );
@@ -3263,6 +3619,13 @@ export default function App() {
           >
             <Text style={styles.startButtonText}>START WORKOUT</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.viewPlanButton}
+            onPress={() => setStep(13)}
+          >
+            <Text style={styles.viewPlanButtonText}>VIEW WEEKLY PLAN</Text>
+          </TouchableOpacity>
         </View>
 
         <Text style={styles.sectionTitle}>This Week</Text>
@@ -3349,7 +3712,7 @@ export default function App() {
 
       <View style={styles.bottomNavigation}>
         <NavItem emoji="⌂" text="Home" active />
-        <NavItem emoji="🏋️" text="Workout" onPress={startTimedWorkout} />
+        <NavItem emoji="🏋️" text="Workout" onPress={() => setStep(13)} />
         <NavItem emoji="✦" text="Coach" onPress={() => setStep(10)} />
         <NavItem emoji="📈" text="Progress" onPress={() => setStep(8)} />
         <NavItem emoji="●" text="Profile" onPress={() => setStep(11)} />
@@ -3731,6 +4094,216 @@ const styles = StyleSheet.create({
 
   selectedTimeChoiceText: {
     color: COLORS.background,
+  },
+
+  workoutPlanScreen: {
+    padding: 22,
+    paddingTop: 34,
+    paddingBottom: 60,
+  },
+
+  workoutPlanTitle: {
+    color: COLORS.white,
+    fontSize: 31,
+    lineHeight: 37,
+    fontWeight: "900",
+    marginTop: 7,
+  },
+
+  workoutPlanSubtitle: {
+    color: COLORS.muted,
+    lineHeight: 21,
+    marginTop: 9,
+    marginBottom: 20,
+  },
+
+  workoutPlanOverview: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#10160C",
+    borderWidth: 1,
+    borderColor: "#2E4516",
+    borderRadius: 21,
+    padding: 18,
+  },
+
+  workoutPlanOverviewText: {
+    flex: 1,
+  },
+
+  workoutPlanOverviewLabel: {
+    color: COLORS.green,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
+  workoutPlanOverviewTitle: {
+    color: COLORS.white,
+    fontSize: 20,
+    fontWeight: "900",
+    marginTop: 5,
+  },
+
+  workoutPlanOverviewMeta: {
+    color: COLORS.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 6,
+  },
+
+  workoutPlanOverviewEmoji: {
+    fontSize: 28,
+    marginLeft: 12,
+  },
+
+  workoutPlanProgressRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 17,
+  },
+
+  workoutPlanProgressText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+
+  workoutPlanProgressPercent: {
+    color: COLORS.green,
+    fontSize: 13,
+    fontWeight: "900",
+  },
+
+  workoutPlanBar: {
+    height: 8,
+    borderRadius: 8,
+    backgroundColor: "#222222",
+    marginTop: 9,
+    marginBottom: 25,
+    overflow: "hidden",
+  },
+
+  workoutPlanBarFill: {
+    height: "100%",
+    borderRadius: 8,
+    backgroundColor: COLORS.green,
+  },
+
+  workoutPlanSectionTitle: {
+    color: COLORS.white,
+    fontSize: 20,
+    fontWeight: "900",
+    marginBottom: 13,
+  },
+
+  workoutPlanCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 22,
+    padding: 17,
+    marginBottom: 13,
+  },
+
+  workoutPlanCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  workoutPlanIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 15,
+    backgroundColor: COLORS.cardSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+
+  workoutPlanIconText: {
+    fontSize: 24,
+  },
+
+  workoutPlanCardTitleWrap: {
+    flex: 1,
+  },
+
+  workoutPlanDay: {
+    color: COLORS.green,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
+  workoutPlanCardTitle: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "900",
+    marginTop: 3,
+  },
+
+  workoutPlanCardMeta: {
+    color: COLORS.muted,
+    fontSize: 12,
+    marginTop: 4,
+  },
+
+  workoutPlanExercisePreview: {
+    backgroundColor: COLORS.cardSoft,
+    borderRadius: 15,
+    padding: 13,
+    marginTop: 14,
+  },
+
+  workoutPlanExerciseText: {
+    color: COLORS.white,
+    fontSize: 13,
+    lineHeight: 21,
+  },
+
+  workoutPlanMoreText: {
+    color: COLORS.green,
+    fontSize: 12,
+    fontWeight: "800",
+    marginTop: 3,
+  },
+
+  workoutPlanStartButton: {
+    minHeight: 49,
+    borderRadius: 15,
+    backgroundColor: COLORS.green,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 13,
+  },
+
+  workoutPlanStartText: {
+    color: COLORS.background,
+    fontWeight: "900",
+    fontSize: 13,
+    letterSpacing: 0.6,
+  },
+
+  workoutPlanNote: {
+    backgroundColor: COLORS.cardSoft,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 3,
+  },
+
+  workoutPlanNoteTitle: {
+    color: COLORS.white,
+    fontWeight: "900",
+    fontSize: 15,
+  },
+
+  workoutPlanNoteText: {
+    color: COLORS.muted,
+    lineHeight: 20,
+    marginTop: 5,
   },
 
   timerWorkoutScreen: {
@@ -5637,6 +6210,23 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: "900",
     letterSpacing: 0.8,
+  },
+
+  viewPlanButton: {
+    borderWidth: 1,
+    borderColor: "#354900",
+    borderRadius: 15,
+    minHeight: 45,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 9,
+  },
+
+  viewPlanButtonText: {
+    color: COLORS.background,
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 0.6,
   },
 
   sectionTitle: {
