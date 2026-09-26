@@ -56,6 +56,24 @@ type WorkoutHistoryItem = {
   plannedDuration: string;
 };
 
+type ExerciseCategory =
+  | "All"
+  | "Upper Body"
+  | "Lower Body"
+  | "Core"
+  | "Mobility"
+  | "Gym";
+
+type ExerciseLibraryItem = {
+  name: string;
+  emoji: string;
+  category: Exclude<ExerciseCategory, "All">;
+  focus: string;
+  equipment: string;
+  cue: string;
+  easierOption: string;
+};
+
 const COLORS = {
   background: "#080808",
   card: "#111111",
@@ -77,6 +95,153 @@ const EQUIPMENT = [
   "Gym Machines",
   "Pull-Up Bar",
   "Kettlebell",
+];
+
+const EXERCISE_LIBRARY: ExerciseLibraryItem[] = [
+  {
+    name: "Push-Ups",
+    emoji: "💪",
+    category: "Upper Body",
+    focus: "Chest, shoulders, arms",
+    equipment: "No equipment",
+    cue: "Keep the movement controlled and choose a version that feels comfortable.",
+    easierOption: "Use a wall, counter, or knees-down version.",
+  },
+  {
+    name: "Push-Up Board Chest Press",
+    emoji: "🟩",
+    category: "Upper Body",
+    focus: "Chest and arms",
+    equipment: "Push-Up Board",
+    cue: "Use a handle position that feels natural on your shoulders and wrists.",
+    easierOption: "Use an incline or knees-down setup with the board.",
+  },
+  {
+    name: "One-Arm Row",
+    emoji: "🏋️",
+    category: "Upper Body",
+    focus: "Back and arms",
+    equipment: "Dumbbell or kettlebell",
+    cue: "Keep your torso steady and use a weight you can control smoothly.",
+    easierOption: "Use a lighter weight or support one hand on a stable surface.",
+  },
+  {
+    name: "Standing Shoulder Press",
+    emoji: "⬆️",
+    category: "Upper Body",
+    focus: "Shoulders and arms",
+    equipment: "Dumbbells",
+    cue: "Press smoothly without leaning back to force the movement.",
+    easierOption: "Use lighter weights or press one side at a time.",
+  },
+  {
+    name: "Bodyweight Squats",
+    emoji: "🦵",
+    category: "Lower Body",
+    focus: "Legs and hips",
+    equipment: "No equipment",
+    cue: "Use a comfortable depth and keep each rep steady.",
+    easierOption: "Squat toward a chair or hold a stable support.",
+  },
+  {
+    name: "Reverse Lunges",
+    emoji: "↩️",
+    category: "Lower Body",
+    focus: "Legs and balance",
+    equipment: "No equipment",
+    cue: "Step back under control and keep the range comfortable.",
+    easierOption: "Hold a wall or chair for balance.",
+  },
+  {
+    name: "Glute Bridges",
+    emoji: "🌉",
+    category: "Lower Body",
+    focus: "Hips and glutes",
+    equipment: "No equipment",
+    cue: "Move smoothly and pause briefly at the top without forcing the range.",
+    easierOption: "Use a smaller range of motion.",
+  },
+  {
+    name: "Goblet Squat",
+    emoji: "🏋️",
+    category: "Lower Body",
+    focus: "Legs and hips",
+    equipment: "Dumbbell or kettlebell",
+    cue: "Choose a manageable weight and keep the movement controlled.",
+    easierOption: "Practice the same movement without weight first.",
+  },
+  {
+    name: "Dead Bug",
+    emoji: "🧩",
+    category: "Core",
+    focus: "Core control",
+    equipment: "No equipment",
+    cue: "Move slowly and keep your back in a comfortable position.",
+    easierOption: "Move one arm or one leg at a time.",
+  },
+  {
+    name: "Bird Dog",
+    emoji: "🐦",
+    category: "Core",
+    focus: "Core and back control",
+    equipment: "No equipment",
+    cue: "Reach slowly without twisting your body.",
+    easierOption: "Move only an arm or only a leg.",
+  },
+  {
+    name: "Plank",
+    emoji: "▬",
+    category: "Core",
+    focus: "Core and shoulder stability",
+    equipment: "No equipment",
+    cue: "Keep a comfortable position and finish before your form breaks down.",
+    easierOption: "Use an elevated surface or knees-down position.",
+  },
+  {
+    name: "Cat-Cow",
+    emoji: "🧘",
+    category: "Mobility",
+    focus: "Spine and gentle movement",
+    equipment: "No equipment",
+    cue: "Move slowly through a comfortable range.",
+    easierOption: "Use a smaller range and move at your own pace.",
+  },
+  {
+    name: "Shoulder Wall Slides",
+    emoji: "🧱",
+    category: "Mobility",
+    focus: "Shoulders and upper back",
+    equipment: "Wall",
+    cue: "Keep the movement smooth and do not force your arms higher.",
+    easierOption: "Use a smaller range of motion.",
+  },
+  {
+    name: "Leg Press",
+    emoji: "🏋️",
+    category: "Gym",
+    focus: "Legs",
+    equipment: "Leg press machine",
+    cue: "Set the machine comfortably and use a load you can control.",
+    easierOption: "Reduce the load or use a shorter comfortable range.",
+  },
+  {
+    name: "Lat Pulldown",
+    emoji: "⬇️",
+    category: "Gym",
+    focus: "Back and arms",
+    equipment: "Cable machine",
+    cue: "Pull smoothly without swinging your body.",
+    easierOption: "Reduce the weight and slow the movement down.",
+  },
+  {
+    name: "Chest Press Machine",
+    emoji: "➡️",
+    category: "Gym",
+    focus: "Chest and arms",
+    equipment: "Chest press machine",
+    cue: "Adjust the seat so the handles feel comfortable and press smoothly.",
+    easierOption: "Reduce the weight and use a comfortable range.",
+  },
 ];
 
 const MEALS: MealRecipe[] = [
@@ -173,6 +338,9 @@ export default function App() {
   const [mealCategory, setMealCategory] = useState<MealCategory>("All");
   const [mealSearch, setMealSearch] = useState("");
   const [workoutHistory, setWorkoutHistory] = useState<WorkoutHistoryItem[]>([]);
+  const [exerciseCategory, setExerciseCategory] = useState<ExerciseCategory>("All");
+  const [exerciseSearch, setExerciseSearch] = useState("");
+  const [expandedExercise, setExpandedExercise] = useState<string | null>(null);
 
   const toggleEquipment = (item: string) => {
     if (item === "No Equipment") {
@@ -530,6 +698,23 @@ export default function App() {
   const weeklyProgressPercent = trainingDays
     ? Math.min(100, Math.round((completedWorkouts / trainingDays) * 100))
     : 0;
+
+  const filteredExercises = useMemo(() => {
+    const query = exerciseSearch.trim().toLowerCase();
+
+    return EXERCISE_LIBRARY.filter((exercise) => {
+      const categoryMatch =
+        exerciseCategory === "All" || exercise.category === exerciseCategory;
+
+      const searchMatch =
+        !query ||
+        exercise.name.toLowerCase().includes(query) ||
+        exercise.focus.toLowerCase().includes(query) ||
+        exercise.equipment.toLowerCase().includes(query);
+
+      return categoryMatch && searchMatch;
+    });
+  }, [exerciseCategory, exerciseSearch]);
 
   const filteredMeals = useMemo(() => {
     const query = mealSearch.trim().toLowerCase();
@@ -1276,6 +1461,157 @@ export default function App() {
   }
 
 
+  if (step === 9) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+
+        <ScrollView
+          contentContainerStyle={styles.libraryScreen}
+          showsVerticalScrollIndicator={false}
+        >
+          <TouchableOpacity onPress={() => setStep(5)}>
+            <Text style={styles.workoutBack}>‹ Back home</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.workoutScreenLabel}>EXERCISE LIBRARY</Text>
+          <Text style={styles.libraryTitle}>Learn the movements</Text>
+          <Text style={styles.librarySubtitle}>
+            Browse exercises by body area or equipment. Z Workout still chooses
+            the actual sets, reps, and recovery when it builds a session.
+          </Text>
+
+          <TextInput
+            value={exerciseSearch}
+            onChangeText={setExerciseSearch}
+            placeholder="Search push-ups, legs, dumbbells..."
+            placeholderTextColor="#5D5D5D"
+            style={styles.librarySearch}
+          />
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.libraryCategoryRow}
+          >
+            {(
+              [
+                "All",
+                "Upper Body",
+                "Lower Body",
+                "Core",
+                "Mobility",
+                "Gym",
+              ] as ExerciseCategory[]
+            ).map((category) => (
+              <TouchableOpacity
+                key={category}
+                style={[
+                  styles.libraryCategoryChip,
+                  exerciseCategory === category &&
+                    styles.libraryCategoryChipActive,
+                ]}
+                onPress={() => setExerciseCategory(category)}
+              >
+                <Text
+                  style={[
+                    styles.libraryCategoryText,
+                    exerciseCategory === category &&
+                      styles.libraryCategoryTextActive,
+                  ]}
+                >
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <Text style={styles.libraryResultCount}>
+            {filteredExercises.length} exercise
+            {filteredExercises.length === 1 ? "" : "s"}
+          </Text>
+
+          {filteredExercises.length === 0 ? (
+            <View style={styles.libraryEmptyCard}>
+              <Text style={styles.libraryEmptyTitle}>No exercises found</Text>
+              <Text style={styles.libraryEmptyText}>
+                Try another search or choose All.
+              </Text>
+            </View>
+          ) : (
+            filteredExercises.map((exercise) => {
+              const expanded = expandedExercise === exercise.name;
+
+              return (
+                <TouchableOpacity
+                  key={exercise.name}
+                  activeOpacity={0.85}
+                  style={[
+                    styles.libraryCard,
+                    expanded && styles.libraryCardExpanded,
+                  ]}
+                  onPress={() =>
+                    setExpandedExercise(expanded ? null : exercise.name)
+                  }
+                >
+                  <View style={styles.libraryCardHeader}>
+                    <View style={styles.libraryEmojiBox}>
+                      <Text style={styles.libraryEmoji}>{exercise.emoji}</Text>
+                    </View>
+
+                    <View style={styles.libraryCardTitleWrap}>
+                      <Text style={styles.libraryCardTitle}>{exercise.name}</Text>
+                      <Text style={styles.libraryCardMeta}>
+                        {exercise.category} • {exercise.equipment}
+                      </Text>
+                    </View>
+
+                    <Text style={styles.libraryExpandIcon}>
+                      {expanded ? "−" : "+"}
+                    </Text>
+                  </View>
+
+                  <View style={styles.libraryFocusRow}>
+                    <Text style={styles.libraryFocusLabel}>FOCUS</Text>
+                    <Text style={styles.libraryFocusText}>{exercise.focus}</Text>
+                  </View>
+
+                  {expanded && (
+                    <View style={styles.libraryDetails}>
+                      <Text style={styles.libraryDetailLabel}>FORM CUE</Text>
+                      <Text style={styles.libraryDetailText}>{exercise.cue}</Text>
+
+                      <Text style={styles.libraryDetailLabel}>EASIER OPTION</Text>
+                      <Text style={styles.libraryDetailText}>
+                        {exercise.easierOption}
+                      </Text>
+
+                      <View style={styles.librarySafetyBox}>
+                        <Text style={styles.librarySafetyText}>
+                          Use a comfortable range, move with control, and stop if
+                          the exercise causes pain.
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })
+          )}
+
+          <View style={styles.libraryFooterNote}>
+            <Text style={styles.libraryFooterTitle}>Use the library to learn</Text>
+            <Text style={styles.libraryFooterText}>
+              Your guided workout handles the timing and progression so you do
+              not have to build the session manually.
+            </Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
@@ -1380,6 +1716,7 @@ export default function App() {
             emoji="🏋️"
             title="Exercises"
             subtitle="Exercise library"
+            onPress={() => setStep(9)}
           />
         </View>
 
@@ -2603,6 +2940,225 @@ const styles = StyleSheet.create({
   },
 
   progressMindsetText: {
+    color: COLORS.muted,
+    lineHeight: 20,
+  },
+
+  libraryScreen: {
+    padding: 22,
+    paddingTop: 34,
+    paddingBottom: 60,
+  },
+
+  libraryTitle: {
+    color: COLORS.white,
+    fontSize: 31,
+    lineHeight: 37,
+    fontWeight: "900",
+    marginTop: 7,
+  },
+
+  librarySubtitle: {
+    color: COLORS.muted,
+    lineHeight: 21,
+    marginTop: 9,
+    marginBottom: 20,
+  },
+
+  librarySearch: {
+    backgroundColor: COLORS.card,
+    color: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    marginBottom: 14,
+  },
+
+  libraryCategoryRow: {
+    gap: 9,
+    paddingBottom: 16,
+  },
+
+  libraryCategoryChip: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    borderRadius: 30,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+  },
+
+  libraryCategoryChipActive: {
+    backgroundColor: COLORS.green,
+    borderColor: COLORS.green,
+  },
+
+  libraryCategoryText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+
+  libraryCategoryTextActive: {
+    color: COLORS.background,
+  },
+
+  libraryResultCount: {
+    color: COLORS.muted,
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+
+  libraryCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 11,
+  },
+
+  libraryCardExpanded: {
+    borderColor: "#3A4F15",
+    backgroundColor: "#10140C",
+  },
+
+  libraryCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  libraryEmojiBox: {
+    width: 45,
+    height: 45,
+    borderRadius: 14,
+    backgroundColor: COLORS.cardSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+
+  libraryEmoji: {
+    fontSize: 22,
+  },
+
+  libraryCardTitleWrap: {
+    flex: 1,
+  },
+
+  libraryCardTitle: {
+    color: COLORS.white,
+    fontSize: 17,
+    fontWeight: "900",
+  },
+
+  libraryCardMeta: {
+    color: COLORS.muted,
+    fontSize: 12,
+    marginTop: 3,
+  },
+
+  libraryExpandIcon: {
+    color: COLORS.green,
+    fontSize: 25,
+    fontWeight: "700",
+    marginLeft: 10,
+  },
+
+  libraryFocusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 13,
+  },
+
+  libraryFocusLabel: {
+    color: COLORS.green,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.9,
+    marginRight: 8,
+  },
+
+  libraryFocusText: {
+    color: COLORS.white,
+    flex: 1,
+    fontSize: 13,
+  },
+
+  libraryDetails: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    marginTop: 14,
+    paddingTop: 14,
+  },
+
+  libraryDetailLabel: {
+    color: COLORS.green,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.9,
+    marginBottom: 5,
+    marginTop: 4,
+  },
+
+  libraryDetailText: {
+    color: COLORS.muted,
+    lineHeight: 20,
+    marginBottom: 10,
+  },
+
+  librarySafetyBox: {
+    backgroundColor: COLORS.cardSoft,
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 3,
+  },
+
+  librarySafetyText: {
+    color: COLORS.muted,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+
+  libraryEmptyCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    padding: 18,
+  },
+
+  libraryEmptyTitle: {
+    color: COLORS.white,
+    fontSize: 17,
+    fontWeight: "900",
+  },
+
+  libraryEmptyText: {
+    color: COLORS.muted,
+    marginTop: 5,
+  },
+
+  libraryFooterNote: {
+    backgroundColor: "#10160C",
+    borderWidth: 1,
+    borderColor: "#2E4516",
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 10,
+  },
+
+  libraryFooterTitle: {
+    color: COLORS.green,
+    fontWeight: "900",
+    marginBottom: 5,
+  },
+
+  libraryFooterText: {
     color: COLORS.muted,
     lineHeight: 20,
   },
