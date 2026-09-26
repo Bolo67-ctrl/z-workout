@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   SafeAreaView,
   ScrollView,
@@ -16,6 +16,7 @@ type Goal =
   | "endurance"
   | "consistency"
   | "mobility";
+
 const COLORS = {
   background: "#080808",
   card: "#111111",
@@ -26,35 +27,74 @@ const COLORS = {
   muted: "#8A8A8A",
 };
 
+const EQUIPMENT = [
+  "No Equipment",
+  "Push-Up Board",
+  "Dumbbells",
+  "Barbell",
+  "Resistance Bands",
+  "Bench",
+  "Cable Machine",
+  "Gym Machines",
+  "Pull-Up Bar",
+  "Kettlebell",
+];
+
 export default function App() {
   const [step, setStep] = useState(0);
-
   const [workoutPlace, setWorkoutPlace] = useState<Place | null>(null);
-
   const [goal, setGoal] = useState<Goal | null>(null);
-
   const [equipment, setEquipment] = useState<string[]>([]);
+  const [trainingDays, setTrainingDays] = useState<number | null>(null);
+  const [workoutLength, setWorkoutLength] = useState<string | null>(null);
 
- const toggleEquipment = (item: string) => {
-  if (item === "No Equipment") {
-    setEquipment(["No Equipment"]);
-    return;
-  }
+  const toggleEquipment = (item: string) => {
+    if (item === "No Equipment") {
+      setEquipment(["No Equipment"]);
+      return;
+    }
 
-  let updatedEquipment = equipment.filter(
-    (equipmentItem) => equipmentItem !== "No Equipment"
-  );
-
-  if (updatedEquipment.includes(item)) {
-    updatedEquipment = updatedEquipment.filter(
-      (equipmentItem) => equipmentItem !== item
+    const withoutNoEquipment = equipment.filter(
+      (equipmentItem) => equipmentItem !== "No Equipment"
     );
-  } else {
-    updatedEquipment = [...updatedEquipment, item];
-  }
 
-  setEquipment(updatedEquipment);
-};
+    if (withoutNoEquipment.includes(item)) {
+      setEquipment(
+        withoutNoEquipment.filter((equipmentItem) => equipmentItem !== item)
+      );
+    } else {
+      setEquipment([...withoutNoEquipment, item]);
+    }
+  };
+
+  const todayWorkout = useMemo(() => {
+    if (goal === "muscle") {
+      if (equipment.includes("Push-Up Board")) {
+        return "Push-Up Board Muscle Builder";
+      }
+
+      if (equipment.includes("No Equipment")) {
+        return "Bodyweight Muscle Builder";
+      }
+
+      return "Muscle Building Workout";
+    }
+
+    if (goal === "strength") return "Strength Training";
+    if (goal === "endurance") return "Full Body Conditioning";
+    if (goal === "mobility") return "Mobility Flow";
+
+    return "Full Body Workout";
+  }, [goal, equipment]);
+
+  const planDescription = useMemo(() => {
+    const locationText = workoutPlace === "gym" ? "Gym" : "Home";
+    const equipmentText = equipment.includes("No Equipment")
+      ? "No equipment"
+      : equipment.join(", ");
+
+    return `${locationText} • ${trainingDays ?? "-"} days/week • ${workoutLength ?? "-"} • ${equipmentText || "Equipment not set"}`;
+  }, [workoutPlace, trainingDays, workoutLength, equipment]);
 
   if (step === 0) {
     return (
@@ -96,21 +136,19 @@ export default function App() {
         <StatusBar style="light" />
 
         <ScrollView contentContainerStyle={styles.onboarding}>
-          <Text style={styles.step}>STEP 1 OF 3</Text>
+          <Text style={styles.step}>STEP 1 OF 4</Text>
 
-          <Text style={styles.question}>
-            Where do you usually work out?
-          </Text>
+          <Text style={styles.question}>Where do you usually work out?</Text>
 
           <Text style={styles.description}>
-            Z Workout will customize your workouts around the equipment you
-            have available.
+            Z Workout will customize your workouts around the space and
+            equipment you have available.
           </Text>
 
           <OptionCard
             emoji="🏠"
             title="Home"
-            description="Bodyweight, dumbbells, bands and home equipment"
+            description="Bodyweight, push-up boards, dumbbells, bands and home equipment"
             selected={workoutPlace === "home"}
             onPress={() => setWorkoutPlace("home")}
           />
@@ -118,7 +156,7 @@ export default function App() {
           <OptionCard
             emoji="🏋️"
             title="Gym"
-            description="Machines, cables, barbells and gym equipment"
+            description="Machines, cables, barbells, dumbbells and gym equipment"
             selected={workoutPlace === "gym"}
             onPress={() => setWorkoutPlace("gym")}
           />
@@ -146,29 +184,30 @@ export default function App() {
         <StatusBar style="light" />
 
         <ScrollView contentContainerStyle={styles.onboarding}>
-          <Text style={styles.step}>STEP 2 OF 3</Text>
+          <Text style={styles.step}>STEP 2 OF 4</Text>
 
-          <Text style={styles.question}>
-            What do you want to improve?
-          </Text>
+          <Text style={styles.question}>What do you want to improve?</Text>
 
           <Text style={styles.description}>
-            Choose the main goal you want Z Workout to focus on.
+            Choose your main goal. Your plan will still adapt to the equipment
+            you actually have.
           </Text>
-<OptionCard
-  emoji="💪"
-  title="Build Muscle"
-  description="Build muscle with workouts adapted to the equipment you have"
-  selected={goal === "muscle"}
-  onPress={() => setGoal("muscle")}
-/>
-        <OptionCard
-  emoji="🏋️"
-  title="Build Strength"
-  description="Focus on becoming stronger over time"
-  selected={goal === "strength"}
-  onPress={() => setGoal("strength")}
-/>
+
+          <OptionCard
+            emoji="💪"
+            title="Build Muscle"
+            description="Build muscle with training adapted to your available equipment"
+            selected={goal === "muscle"}
+            onPress={() => setGoal("muscle")}
+          />
+
+          <OptionCard
+            emoji="🏋️"
+            title="Build Strength"
+            description="Focus on gradually getting stronger over time"
+            selected={goal === "strength"}
+            onPress={() => setGoal("strength")}
+          />
 
           <OptionCard
             emoji="⚡"
@@ -214,30 +253,17 @@ export default function App() {
         <StatusBar style="light" />
 
         <ScrollView contentContainerStyle={styles.onboarding}>
-          <Text style={styles.step}>STEP 3 OF 3</Text>
+          <Text style={styles.step}>STEP 3 OF 4</Text>
 
-          <Text style={styles.question}>
-            What equipment do you have?
-          </Text>
+          <Text style={styles.question}>What equipment do you have?</Text>
 
           <Text style={styles.description}>
-            Select everything available to you. You can change this later.
+            Select everything available to you. Choose No Equipment if you only
+            want bodyweight workouts.
           </Text>
 
           <View style={styles.chipContainer}>
-            {[[
-  "No Equipment",
-  "Push-Up Board",
-  "Dumbbells",
-  "Barbell",
-  "Resistance Bands",
-  "Bench",
-  "Cable Machine",
-  "Gym Machines",
-  "Pull-Up Bar",
-  "Kettlebell",
-]
-            ].map((item) => (
+            {EQUIPMENT.map((item) => (
               <TouchableOpacity
                 key={item}
                 style={[
@@ -258,14 +284,116 @@ export default function App() {
             ))}
           </View>
 
+          {equipment.includes("Push-Up Board") && (
+            <View style={styles.infoCard}>
+              <Text style={styles.infoTitle}>Push-Up Board selected</Text>
+              <Text style={styles.infoText}>
+                Z Workout will use your board for upper-body exercises and
+                combine it with bodyweight movements for the rest of your plan.
+              </Text>
+            </View>
+          )}
+
           <TouchableOpacity
-            style={styles.primaryButton}
+            disabled={equipment.length === 0}
+            style={[
+              styles.primaryButton,
+              equipment.length === 0 && styles.disabledButton,
+            ]}
             onPress={() => setStep(4)}
+          >
+            <Text style={styles.primaryButtonText}>CONTINUE</Text>
+          </TouchableOpacity>
+
+          <BackButton onPress={() => setStep(2)} />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (step === 4) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+
+        <ScrollView contentContainerStyle={styles.onboarding}>
+          <Text style={styles.step}>STEP 4 OF 4</Text>
+
+          <Text style={styles.question}>Build your schedule</Text>
+
+          <Text style={styles.description}>
+            Tell Z Workout how often you want to train and how much time you
+            usually have for each workout.
+          </Text>
+
+          <Text style={styles.sectionQuestion}>
+            How many days per week?
+          </Text>
+
+          <View style={styles.choiceRow}>
+            {[2, 3, 4, 5, 6].map((day) => (
+              <TouchableOpacity
+                key={day}
+                style={[
+                  styles.numberChoice,
+                  trainingDays === day && styles.selectedNumberChoice,
+                ]}
+                onPress={() => setTrainingDays(day)}
+              >
+                <Text
+                  style={[
+                    styles.numberChoiceText,
+                    trainingDays === day && styles.selectedNumberChoiceText,
+                  ]}
+                >
+                  {day}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.scheduleHint}>
+            Rest and recovery days are part of your plan too.
+          </Text>
+
+          <Text style={styles.sectionQuestion}>
+            How long should each workout be?
+          </Text>
+
+          <View style={styles.timeGrid}>
+            {["15 min", "30 min", "45 min", "60+ min"].map((time) => (
+              <TouchableOpacity
+                key={time}
+                style={[
+                  styles.timeChoice,
+                  workoutLength === time && styles.selectedTimeChoice,
+                ]}
+                onPress={() => setWorkoutLength(time)}
+              >
+                <Text
+                  style={[
+                    styles.timeChoiceText,
+                    workoutLength === time && styles.selectedTimeChoiceText,
+                  ]}
+                >
+                  {time}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <TouchableOpacity
+            disabled={!trainingDays || !workoutLength}
+            style={[
+              styles.primaryButton,
+              (!trainingDays || !workoutLength) && styles.disabledButton,
+            ]}
+            onPress={() => setStep(5)}
           >
             <Text style={styles.primaryButtonText}>CREATE MY PLAN</Text>
           </TouchableOpacity>
 
-          <BackButton onPress={() => setStep(2)} />
+          <BackButton onPress={() => setStep(3)} />
         </ScrollView>
       </SafeAreaView>
     );
@@ -281,44 +409,36 @@ export default function App() {
       >
         <View style={styles.header}>
           <View>
-            <Text style={styles.smallMuted}>GOOD MORNING</Text>
+            <Text style={styles.smallMuted}>YOUR Z PLAN</Text>
             <Text style={styles.dashboardTitle}>Ready to train?</Text>
           </View>
 
           <TouchableOpacity style={styles.profileCircle}>
-            <Text style={styles.profileLetter}>D</Text>
+            <Text style={styles.profileLetter}>Z</Text>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.planSummary}>
+          <Text style={styles.planSummaryLabel}>PERSONALIZED FOR YOU</Text>
+          <Text style={styles.planSummaryText}>{planDescription}</Text>
         </View>
 
         <View style={styles.todayCard}>
           <View style={styles.todayTopRow}>
-            <View>
+            <View style={styles.todayTextWrap}>
               <Text style={styles.todayLabel}>TODAY'S WORKOUT</Text>
-
-              <Text style={styles.todayTitle}>
-  {goal === "muscle"
-    ? equipment.includes("Push-Up Board")
-      ? "Push-Up Board Muscle Builder"
-      : equipment.includes("No Equipment")
-      ? "Bodyweight Muscle Builder"
-      : "Muscle Building Workout"
-    : goal === "strength"
-    ? "Strength Training"
-    : goal === "endurance"
-    ? "Full Body Conditioning"
-    : goal === "mobility"
-    ? "Mobility Flow"
-    : "Full Body Workout"}
-</Text>
+              <Text style={styles.todayTitle}>{todayWorkout}</Text>
             </View>
 
             <Text style={styles.workoutEmoji}>⚡</Text>
           </View>
 
           <View style={styles.workoutDetails}>
-            <Text style={styles.detailText}>⏱ 45 min</Text>
+            <Text style={styles.detailText}>⏱ {workoutLength}</Text>
             <Text style={styles.detailText}>•</Text>
-            <Text style={styles.detailText}>6 exercises</Text>
+            <Text style={styles.detailText}>
+              {trainingDays} days/week plan
+            </Text>
           </View>
 
           <TouchableOpacity style={styles.startButton}>
@@ -330,18 +450,18 @@ export default function App() {
 
         <View style={styles.progressCard}>
           <View>
-            <Text style={styles.progressNumber}>3 / 4</Text>
+            <Text style={styles.progressNumber}>0 / {trainingDays}</Text>
             <Text style={styles.progressLabel}>Workouts completed</Text>
           </View>
 
           <View style={styles.streakBox}>
-            <Text style={styles.streakNumber}>🔥 6</Text>
+            <Text style={styles.streakNumber}>🔥 0</Text>
             <Text style={styles.streakLabel}>Day streak</Text>
           </View>
         </View>
 
         <View style={styles.progressBarBackground}>
-          <View style={styles.progressBarFill} />
+          <View style={[styles.progressBarFill, { width: "0%" }]} />
         </View>
 
         <Text style={styles.sectionTitle}>Explore</Text>
@@ -375,12 +495,11 @@ export default function App() {
         <View style={styles.coachCard}>
           <Text style={styles.coachTag}>Z COACH</Text>
 
-          <Text style={styles.coachTitle}>
-            Need a different workout today?
-          </Text>
+          <Text style={styles.coachTitle}>Need a different workout today?</Text>
 
           <Text style={styles.coachDescription}>
             Tell Z Coach how much time you have and what equipment is available.
+            Your plan can adapt without making you restart.
           </Text>
 
           <TouchableOpacity style={styles.coachButton}>
@@ -468,7 +587,6 @@ function NavItem({
   return (
     <TouchableOpacity style={styles.navItem}>
       <Text style={[styles.navEmoji, active && styles.activeNav]}>{emoji}</Text>
-
       <Text style={[styles.navText, active && styles.activeNav]}>{text}</Text>
     </TouchableOpacity>
   );
@@ -654,6 +772,105 @@ const styles = StyleSheet.create({
     color: COLORS.background,
   },
 
+  infoCard: {
+    backgroundColor: COLORS.cardSoft,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 18,
+  },
+
+  infoTitle: {
+    color: COLORS.green,
+    fontWeight: "900",
+    fontSize: 15,
+    marginBottom: 6,
+  },
+
+  infoText: {
+    color: COLORS.muted,
+    lineHeight: 20,
+  },
+
+  sectionQuestion: {
+    color: COLORS.white,
+    fontSize: 19,
+    fontWeight: "800",
+    marginBottom: 15,
+    marginTop: 10,
+  },
+
+  choiceRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+
+  numberChoice: {
+    width: 55,
+    height: 55,
+    borderRadius: 18,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  selectedNumberChoice: {
+    backgroundColor: COLORS.green,
+    borderColor: COLORS.green,
+  },
+
+  numberChoiceText: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+
+  selectedNumberChoiceText: {
+    color: COLORS.background,
+  },
+
+  scheduleHint: {
+    color: COLORS.muted,
+    fontSize: 13,
+    marginBottom: 26,
+  },
+
+  timeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 12,
+    marginBottom: 15,
+  },
+
+  timeChoice: {
+    width: "48%",
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 18,
+    paddingVertical: 18,
+    alignItems: "center",
+  },
+
+  selectedTimeChoice: {
+    backgroundColor: COLORS.green,
+    borderColor: COLORS.green,
+  },
+
+  timeChoiceText: {
+    color: COLORS.white,
+    fontWeight: "800",
+  },
+
+  selectedTimeChoiceText: {
+    color: COLORS.background,
+  },
+
   dashboard: {
     padding: 20,
     paddingTop: 35,
@@ -663,7 +880,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 28,
+    marginBottom: 20,
   },
 
   smallMuted: {
@@ -695,6 +912,29 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
 
+  planSummary: {
+    backgroundColor: COLORS.card,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 18,
+  },
+
+  planSummaryLabel: {
+    color: COLORS.green,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+    marginBottom: 7,
+  },
+
+  planSummaryText: {
+    color: COLORS.white,
+    lineHeight: 20,
+    fontWeight: "700",
+  },
+
   todayCard: {
     backgroundColor: COLORS.green,
     padding: 22,
@@ -705,6 +945,11 @@ const styles = StyleSheet.create({
   todayTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+
+  todayTextWrap: {
+    flex: 1,
+    paddingRight: 10,
   },
 
   todayLabel: {
@@ -719,7 +964,6 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: "900",
     marginTop: 7,
-    maxWidth: 250,
   },
 
   workoutEmoji: {
@@ -728,6 +972,7 @@ const styles = StyleSheet.create({
 
   workoutDetails: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
     marginTop: 15,
     marginBottom: 22,
@@ -801,7 +1046,6 @@ const styles = StyleSheet.create({
   },
 
   progressBarFill: {
-    width: "75%",
     height: "100%",
     borderRadius: 10,
     backgroundColor: COLORS.green,
