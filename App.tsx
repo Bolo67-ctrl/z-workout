@@ -825,6 +825,8 @@ export default function App() {
   const [completedWorkouts, setCompletedWorkouts] = useState(0);
   const [completedPlanSessionIds, setCompletedPlanSessionIds] = useState<string[]>([]);
   const [activePlanSessionId, setActivePlanSessionId] = useState<string | null>(null);
+  const [selectedPlanSession, setSelectedPlanSession] =
+    useState<WorkoutPlanSession | null>(null);
   const [setLogs, setSetLogs] = useState<Record<string, SetLog>>({});
   const [previousSetLogs, setPreviousSetLogs] = useState<Record<string, SetLog>>({});
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
@@ -1826,6 +1828,11 @@ export default function App() {
     setStep(13);
   };
 
+  const openPlanSessionDetails = (session: WorkoutPlanSession) => {
+    setSelectedPlanSession(session);
+    setStep(15);
+  };
+
   const startPlanSession = (session: WorkoutPlanSession) => {
     const firstExercise = session.exercises[0];
 
@@ -2708,23 +2715,33 @@ export default function App() {
                   )}
                 </View>
 
-                <TouchableOpacity
-                  disabled={completed}
-                  style={[
-                    styles.workoutPlanStartButton,
-                    completed && styles.workoutPlanStartButtonCompleted,
-                  ]}
-                  onPress={() => startPlanSession(session)}
-                >
-                  <Text
-                    style={[
-                      styles.workoutPlanStartText,
-                      completed && styles.workoutPlanStartTextCompleted,
-                    ]}
+                <View style={styles.workoutPlanActionRow}>
+                  <TouchableOpacity
+                    style={styles.workoutPlanDetailsButton}
+                    onPress={() => openPlanSessionDetails(session)}
                   >
-                    {completed ? "COMPLETED ✓" : "START SESSION"}
-                  </Text>
-                </TouchableOpacity>
+                    <Text style={styles.workoutPlanDetailsText}>VIEW DETAILS</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    disabled={completed}
+                    style={[
+                      styles.workoutPlanStartButton,
+                      styles.workoutPlanStartButtonHalf,
+                      completed && styles.workoutPlanStartButtonCompleted,
+                    ]}
+                    onPress={() => startPlanSession(session)}
+                  >
+                    <Text
+                      style={[
+                        styles.workoutPlanStartText,
+                        completed && styles.workoutPlanStartTextCompleted,
+                      ]}
+                    >
+                      {completed ? "COMPLETED ✓" : "START SESSION"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             );
           })}
@@ -2736,6 +2753,131 @@ export default function App() {
               Coach when you need a shorter, no-equipment, or recovery option.
             </Text>
           </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (step === 15 && selectedPlanSession) {
+    const selectedCompleted = completedPlanSessionIds.includes(
+      selectedPlanSession.id
+    );
+
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+
+        <ScrollView
+          contentContainerStyle={styles.sessionDetailScreen}
+          showsVerticalScrollIndicator={false}
+        >
+          <TouchableOpacity onPress={() => setStep(13)}>
+            <Text style={styles.workoutBack}>‹ Back to weekly plan</Text>
+          </TouchableOpacity>
+
+          <View style={styles.sessionDetailHero}>
+            <View style={styles.sessionDetailHeroTop}>
+              <View style={styles.sessionDetailIcon}>
+                <Text style={styles.sessionDetailIconText}>
+                  {selectedCompleted ? "✓" : selectedPlanSession.emoji}
+                </Text>
+              </View>
+
+              <View style={styles.sessionDetailHeroText}>
+                <Text style={styles.sessionDetailDay}>
+                  {selectedPlanSession.day ?? "PLANNED SESSION"}
+                </Text>
+                <Text style={styles.sessionDetailTitle}>
+                  {selectedPlanSession.title}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.sessionDetailFocus}>
+              {selectedPlanSession.focus}
+            </Text>
+
+            <View style={styles.sessionDetailMetaRow}>
+              <View style={styles.sessionDetailMetaCard}>
+                <Text style={styles.sessionDetailMetaValue}>
+                  {selectedPlanSession.exercises.length}
+                </Text>
+                <Text style={styles.sessionDetailMetaLabel}>Exercises</Text>
+              </View>
+
+              <View style={styles.sessionDetailMetaCard}>
+                <Text style={styles.sessionDetailMetaValue}>
+                  {workoutLength ?? "-"}
+                </Text>
+                <Text style={styles.sessionDetailMetaLabel}>Planned time</Text>
+              </View>
+
+              <View style={styles.sessionDetailMetaCard}>
+                <Text style={styles.sessionDetailMetaValue}>
+                  {selectedCompleted ? "Done" : "Ready"}
+                </Text>
+                <Text style={styles.sessionDetailMetaLabel}>Status</Text>
+              </View>
+            </View>
+          </View>
+
+          <Text style={styles.sessionDetailSectionTitle}>Session exercises</Text>
+          <Text style={styles.sessionDetailSectionText}>
+            Move with control and use the easier option when an exercise does not
+            feel comfortable.
+          </Text>
+
+          {selectedPlanSession.exercises.map((exercise, index) => (
+            <View
+              key={`${selectedPlanSession.id}-detail-${exercise.name}`}
+              style={styles.sessionExerciseCard}
+            >
+              <View style={styles.sessionExerciseNumber}>
+                <Text style={styles.sessionExerciseNumberText}>{index + 1}</Text>
+              </View>
+
+              <View style={styles.sessionExerciseContent}>
+                <Text style={styles.sessionExerciseName}>{exercise.name}</Text>
+                <Text style={styles.sessionExerciseTarget}>{exercise.target}</Text>
+
+                <View style={styles.sessionExerciseFocusRow}>
+                  <Text style={styles.sessionExerciseFocusLabel}>FOCUS</Text>
+                  <Text style={styles.sessionExerciseFocusText}>
+                    {exercise.focus}
+                  </Text>
+                </View>
+
+                <Text style={styles.sessionExerciseCue}>{exercise.cue}</Text>
+              </View>
+            </View>
+          ))}
+
+          <View style={styles.sessionDetailNote}>
+            <Text style={styles.sessionDetailNoteTitle}>Before you start</Text>
+            <Text style={styles.sessionDetailNoteText}>
+              You can pause the guided timer, take more recovery time, and stop
+              the session if something hurts.
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            disabled={selectedCompleted}
+            style={[
+              styles.sessionDetailStartButton,
+              selectedCompleted && styles.sessionDetailStartButtonCompleted,
+            ]}
+            onPress={() => startPlanSession(selectedPlanSession)}
+          >
+            <Text
+              style={[
+                styles.sessionDetailStartButtonText,
+                selectedCompleted &&
+                  styles.sessionDetailStartButtonTextCompleted,
+              ]}
+            >
+              {selectedCompleted ? "SESSION COMPLETED ✓" : "START THIS SESSION"}
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
     );
@@ -4673,6 +4815,226 @@ const styles = StyleSheet.create({
     color: COLORS.background,
   },
 
+  sessionDetailScreen: {
+    padding: 22,
+    paddingTop: 34,
+    paddingBottom: 60,
+  },
+
+  sessionDetailHero: {
+    backgroundColor: "#10160C",
+    borderWidth: 1,
+    borderColor: "#2E4516",
+    borderRadius: 23,
+    padding: 18,
+    marginTop: 20,
+  },
+
+  sessionDetailHeroTop: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  sessionDetailIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    backgroundColor: COLORS.cardSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 13,
+  },
+
+  sessionDetailIconText: {
+    fontSize: 29,
+  },
+
+  sessionDetailHeroText: {
+    flex: 1,
+  },
+
+  sessionDetailDay: {
+    color: COLORS.green,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
+  sessionDetailTitle: {
+    color: COLORS.white,
+    fontSize: 24,
+    lineHeight: 29,
+    fontWeight: "900",
+    marginTop: 4,
+  },
+
+  sessionDetailFocus: {
+    color: COLORS.muted,
+    lineHeight: 20,
+    marginTop: 14,
+  },
+
+  sessionDetailMetaRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 16,
+  },
+
+  sessionDetailMetaCard: {
+    flex: 1,
+    minHeight: 72,
+    borderRadius: 15,
+    backgroundColor: COLORS.cardSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 5,
+  },
+
+  sessionDetailMetaValue: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+
+  sessionDetailMetaLabel: {
+    color: COLORS.muted,
+    fontSize: 9,
+    marginTop: 4,
+    textAlign: "center",
+  },
+
+  sessionDetailSectionTitle: {
+    color: COLORS.white,
+    fontSize: 20,
+    fontWeight: "900",
+    marginTop: 25,
+  },
+
+  sessionDetailSectionText: {
+    color: COLORS.muted,
+    lineHeight: 20,
+    marginTop: 5,
+    marginBottom: 12,
+  },
+
+  sessionExerciseCard: {
+    flexDirection: "row",
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 19,
+    padding: 15,
+    marginBottom: 10,
+  },
+
+  sessionExerciseNumber: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: COLORS.green,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+
+  sessionExerciseNumberText: {
+    color: COLORS.background,
+    fontSize: 13,
+    fontWeight: "900",
+  },
+
+  sessionExerciseContent: {
+    flex: 1,
+  },
+
+  sessionExerciseName: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "900",
+  },
+
+  sessionExerciseTarget: {
+    color: COLORS.green,
+    fontSize: 13,
+    fontWeight: "800",
+    marginTop: 4,
+  },
+
+  sessionExerciseFocusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    marginTop: 10,
+  },
+
+  sessionExerciseFocusLabel: {
+    color: COLORS.muted,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+
+  sessionExerciseFocusText: {
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+
+  sessionExerciseCue: {
+    color: COLORS.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 8,
+  },
+
+  sessionDetailNote: {
+    backgroundColor: COLORS.cardSoft,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 5,
+  },
+
+  sessionDetailNoteTitle: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+
+  sessionDetailNoteText: {
+    color: COLORS.muted,
+    lineHeight: 20,
+    marginTop: 5,
+  },
+
+  sessionDetailStartButton: {
+    minHeight: 58,
+    borderRadius: 18,
+    backgroundColor: COLORS.green,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 16,
+  },
+
+  sessionDetailStartButtonCompleted: {
+    backgroundColor: "#1A2410",
+    borderWidth: 1,
+    borderColor: "#365018",
+  },
+
+  sessionDetailStartButtonText: {
+    color: COLORS.background,
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 0.7,
+  },
+
+  sessionDetailStartButtonTextCompleted: {
+    color: COLORS.green,
+  },
+
   editPlanScreen: {
     padding: 22,
     paddingTop: 34,
@@ -5026,6 +5388,30 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
+  workoutPlanActionRow: {
+    flexDirection: "row",
+    gap: 9,
+    marginTop: 13,
+  },
+
+  workoutPlanDetailsButton: {
+    flex: 1,
+    minHeight: 49,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.cardSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  workoutPlanDetailsText: {
+    color: COLORS.white,
+    fontWeight: "900",
+    fontSize: 11,
+    letterSpacing: 0.5,
+  },
+
   workoutPlanStartButton: {
     minHeight: 49,
     borderRadius: 15,
@@ -5033,6 +5419,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 13,
+  },
+
+  workoutPlanStartButtonHalf: {
+    flex: 1.25,
+    marginTop: 0,
   },
 
   workoutPlanStartButtonCompleted: {
