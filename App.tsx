@@ -74,6 +74,9 @@ type ExerciseLibraryItem = {
   easierOption: string;
 };
 
+type CoachEnergy = "Ready" | "Low Energy" | "Recovery";
+type CoachEquipmentMode = "Use My Plan" | "No Equipment Today";
+
 const COLORS = {
   background: "#080808",
   card: "#111111",
@@ -341,6 +344,14 @@ export default function App() {
   const [exerciseCategory, setExerciseCategory] = useState<ExerciseCategory>("All");
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [expandedExercise, setExpandedExercise] = useState<string | null>(null);
+  const [coachTime, setCoachTime] = useState("30 min");
+  const [coachEnergy, setCoachEnergy] = useState<CoachEnergy>("Ready");
+  const [coachEquipmentMode, setCoachEquipmentMode] =
+    useState<CoachEquipmentMode>("Use My Plan");
+  const [sessionExercises, setSessionExercises] =
+    useState<WorkoutExercise[] | null>(null);
+  const [sessionTitle, setSessionTitle] = useState<string | null>(null);
+  const [sessionLength, setSessionLength] = useState<string | null>(null);
 
   const toggleEquipment = (item: string) => {
     if (item === "No Equipment") {
@@ -468,6 +479,10 @@ export default function App() {
     return exercises.slice(0, maxExercises);
   }, [goal, equipment, workoutPlace, workoutLength]);
 
+  const activeExercises = sessionExercises ?? workoutExercises;
+  const activeWorkoutTitle = sessionTitle ?? todayWorkout;
+  const activeWorkoutLength = sessionLength ?? workoutLength;
+
   const getSetCount = (target: string) => {
     const match = target.match(/^(\d+)/);
     return match ? Math.max(1, Number(match[1])) : 1;
@@ -570,6 +585,145 @@ export default function App() {
   const startTimedWorkout = () => {
     const firstExercise = workoutExercises[0];
 
+    setSessionExercises(null);
+    setSessionTitle(null);
+    setSessionLength(null);
+    setCompletedSets([]);
+    setSetLogs({});
+    setCurrentExerciseIndex(0);
+    setCurrentSetIndex(0);
+    setTimerPhase("work");
+    setTimeLeft(firstExercise ? getWorkWindow(firstExercise) : 300);
+    setTimerRunning(true);
+    setStep(6);
+  };
+
+  const getCoachExercises = () => {
+    const maxExercises =
+      coachTime === "15 min"
+        ? 4
+        : coachTime === "30 min"
+        ? 5
+        : coachTime === "45 min"
+        ? 6
+        : 7;
+
+    if (coachEnergy === "Recovery") {
+      const recoveryExercises: WorkoutExercise[] = [
+        {
+          name: "Cat-Cow",
+          target: "2 × 6–8 slow reps",
+          focus: "Spine",
+          cue: "Move slowly and stay comfortable.",
+        },
+        {
+          name: "Shoulder Wall Slides",
+          target: "2 × 8–10",
+          focus: "Shoulders",
+          cue: "Use a comfortable range without forcing the movement.",
+        },
+        {
+          name: "Glute Bridge",
+          target: "2 × 10–12",
+          focus: "Hips",
+          cue: "Move smoothly and pause briefly at the top.",
+        },
+        {
+          name: "Dead Bug",
+          target: "2 × 6–8 each side",
+          focus: "Core",
+          cue: "Keep the movement slow and controlled.",
+        },
+        {
+          name: "Bodyweight Squat Hold",
+          target: "2 × 20–30 sec",
+          focus: "Hips + ankles",
+          cue: "Hold onto support if that feels better.",
+        },
+        {
+          name: "Bird Dog",
+          target: "2 × 6–8 each side",
+          focus: "Core + back",
+          cue: "Move slowly without twisting.",
+        },
+      ];
+
+      return recoveryExercises.slice(0, Math.min(maxExercises, 6));
+    }
+
+    if (coachEquipmentMode === "No Equipment Today") {
+      const bodyweightExercises: WorkoutExercise[] = [
+        {
+          name: "Push-Ups",
+          target: "2 × 6–10",
+          focus: "Chest + arms",
+          cue: "Use a wall, incline, or knees-down version if needed.",
+        },
+        {
+          name: "Bodyweight Squats",
+          target: "2 × 10–12",
+          focus: "Legs",
+          cue: "Use a comfortable depth and steady pace.",
+        },
+        {
+          name: "Reverse Lunges",
+          target: "2 × 6–8 each side",
+          focus: "Legs",
+          cue: "Use support for balance if needed.",
+        },
+        {
+          name: "Glute Bridges",
+          target: "2 × 10–12",
+          focus: "Hips",
+          cue: "Move smoothly and pause briefly at the top.",
+        },
+        {
+          name: "Bird Dog",
+          target: "2 × 6–8 each side",
+          focus: "Core + back",
+          cue: "Move slowly without twisting.",
+        },
+        {
+          name: "Dead Bug",
+          target: "2 × 6–8 each side",
+          focus: "Core",
+          cue: "Keep the movement controlled.",
+        },
+        {
+          name: "Calf Raises",
+          target: "2 × 10–15",
+          focus: "Calves",
+          cue: "Use a wall or chair for balance.",
+        },
+      ];
+
+      return bodyweightExercises.slice(0, maxExercises);
+    }
+
+    const planExercises =
+      coachEnergy === "Low Energy"
+        ? workoutExercises.slice(0, Math.max(3, Math.min(maxExercises, 5)))
+        : workoutExercises.slice(0, maxExercises);
+
+    return planExercises;
+  };
+
+  const startCoachWorkout = () => {
+    const coachExercises = getCoachExercises();
+    const firstExercise = coachExercises[0];
+
+    const title =
+      coachEnergy === "Recovery"
+        ? "Recovery & Mobility Session"
+        : coachEquipmentMode === "No Equipment Today"
+        ? "No-Equipment Coach Session"
+        : coachEnergy === "Low Energy"
+        ? "Light Coach Session"
+        : "Z Coach Session";
+
+    setSessionExercises(coachExercises);
+    setSessionTitle(title);
+    setSessionLength(coachTime);
     setCompletedSets([]);
     setSetLogs({});
     setCurrentExerciseIndex(0);
@@ -588,10 +742,10 @@ export default function App() {
     setWorkoutHistory((current) => [
       {
         id: `${Date.now()}`,
-        title: todayWorkout,
+        title: activeWorkoutTitle,
         completedAt: new Date().toISOString(),
-        exercises: workoutExercises.length,
-        plannedDuration: workoutLength ?? "Custom",
+        exercises: activeExercises.length,
+        plannedDuration: activeWorkoutLength ?? "Custom",
       },
       ...current,
     ]);
@@ -599,11 +753,14 @@ export default function App() {
     setCompletedSets([]);
     setSetLogs({});
     setTimerRunning(false);
+    setSessionExercises(null);
+    setSessionTitle(null);
+    setSessionLength(null);
     setStep(5);
   };
 
   const moveToNextSet = () => {
-    const exercise = workoutExercises[currentExerciseIndex];
+    const exercise = activeExercises[currentExerciseIndex];
 
     if (!exercise) {
       finishTimedWorkout();
@@ -613,7 +770,7 @@ export default function App() {
     const setCount = getSetCount(exercise.target);
     const isLastSet = currentSetIndex >= setCount - 1;
     const isLastExercise =
-      currentExerciseIndex >= workoutExercises.length - 1;
+      currentExerciseIndex >= activeExercises.length - 1;
 
     if (!isLastSet) {
       const nextSetIndex = currentSetIndex + 1;
@@ -626,7 +783,7 @@ export default function App() {
 
     if (!isLastExercise) {
       const nextExerciseIndex = currentExerciseIndex + 1;
-      const nextExercise = workoutExercises[nextExerciseIndex];
+      const nextExercise = activeExercises[nextExerciseIndex];
 
       setCurrentExerciseIndex(nextExerciseIndex);
       setCurrentSetIndex(0);
@@ -640,7 +797,7 @@ export default function App() {
   };
 
   const completeTimedSet = () => {
-    const exercise = workoutExercises[currentExerciseIndex];
+    const exercise = activeExercises[currentExerciseIndex];
 
     if (!exercise) return;
 
@@ -694,6 +851,15 @@ export default function App() {
     currentExerciseIndex,
     currentSetIndex,
   ]);
+
+  const coachSummary =
+    coachEnergy === "Recovery"
+      ? "A gentle mobility-focused session with comfortable movement and short recovery breaks."
+      : coachEquipmentMode === "No Equipment Today"
+      ? `A ${coachTime} bodyweight session using no equipment.`
+      : coachEnergy === "Low Energy"
+      ? `A lighter ${coachTime} version of your plan with fewer exercises.`
+      : `A ${coachTime} session based on your current Z Plan and available equipment.`;
 
   const weeklyProgressPercent = trainingDays
     ? Math.min(100, Math.round((completedWorkouts / trainingDays) * 100))
@@ -1064,7 +1230,7 @@ export default function App() {
   }
 
   if (step === 6) {
-    const currentExercise = workoutExercises[currentExerciseIndex];
+    const currentExercise = activeExercises[currentExerciseIndex];
 
     if (!currentExercise) {
       return (
@@ -1097,6 +1263,9 @@ export default function App() {
             <TouchableOpacity
               onPress={() => {
                 setTimerRunning(false);
+                setSessionExercises(null);
+                setSessionTitle(null);
+                setSessionLength(null);
                 setStep(5);
               }}
             >
@@ -1104,7 +1273,7 @@ export default function App() {
             </TouchableOpacity>
 
             <Text style={styles.timerProgressText}>
-              {currentExerciseIndex + 1}/{workoutExercises.length}
+              {currentExerciseIndex + 1}/{activeExercises.length}
             </Text>
           </View>
 
@@ -1221,7 +1390,7 @@ export default function App() {
             <Text style={styles.upNextText}>
               {currentSetIndex < setCount - 1
                 ? `${currentExercise.name} • Set ${currentSetIndex + 2}`
-                : workoutExercises[currentExerciseIndex + 1]?.name ??
+                : activeExercises[currentExerciseIndex + 1]?.name ??
                   "Workout complete"}
             </Text>
           </View>
@@ -1612,6 +1781,147 @@ export default function App() {
   }
 
 
+  if (step === 10) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+
+        <ScrollView
+          contentContainerStyle={styles.coachScreen}
+          showsVerticalScrollIndicator={false}
+        >
+          <TouchableOpacity onPress={() => setStep(5)}>
+            <Text style={styles.workoutBack}>‹ Back home</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.workoutScreenLabel}>Z COACH ✦</Text>
+          <Text style={styles.coachScreenTitle}>Adapt today's workout</Text>
+          <Text style={styles.coachScreenSubtitle}>
+            Tell Z Coach what today looks like. It will adjust the session
+            without changing your main plan.
+          </Text>
+
+          <Text style={styles.coachQuestion}>How much time do you have?</Text>
+          <View style={styles.coachChoiceGrid}>
+            {["15 min", "30 min", "45 min", "60+ min"].map((time) => (
+              <TouchableOpacity
+                key={time}
+                style={[
+                  styles.coachChoiceButton,
+                  coachTime === time && styles.coachChoiceButtonActive,
+                ]}
+                onPress={() => setCoachTime(time)}
+              >
+                <Text
+                  style={[
+                    styles.coachChoiceText,
+                    coachTime === time && styles.coachChoiceTextActive,
+                  ]}
+                >
+                  {time}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.coachQuestion}>What equipment is available now?</Text>
+          <View style={styles.coachStack}>
+            {(["Use My Plan", "No Equipment Today"] as CoachEquipmentMode[]).map(
+              (mode) => (
+                <TouchableOpacity
+                  key={mode}
+                  style={[
+                    styles.coachWideChoice,
+                    coachEquipmentMode === mode && styles.coachWideChoiceActive,
+                  ]}
+                  onPress={() => setCoachEquipmentMode(mode)}
+                >
+                  <Text
+                    style={[
+                      styles.coachWideChoiceTitle,
+                      coachEquipmentMode === mode &&
+                        styles.coachWideChoiceTitleActive,
+                    ]}
+                  >
+                    {mode}
+                  </Text>
+                  <Text style={styles.coachWideChoiceSub}>
+                    {mode === "Use My Plan"
+                      ? equipment.includes("No Equipment")
+                        ? "Your plan is already bodyweight-based."
+                        : equipment.join(", ")
+                      : "Z Coach will build a bodyweight session for today."}
+                  </Text>
+                </TouchableOpacity>
+              )
+            )}
+          </View>
+
+          <Text style={styles.coachQuestion}>How are you feeling today?</Text>
+          <View style={styles.coachStack}>
+            {(["Ready", "Low Energy", "Recovery"] as CoachEnergy[]).map(
+              (energy) => (
+                <TouchableOpacity
+                  key={energy}
+                  style={[
+                    styles.coachWideChoice,
+                    coachEnergy === energy && styles.coachWideChoiceActive,
+                  ]}
+                  onPress={() => setCoachEnergy(energy)}
+                >
+                  <Text
+                    style={[
+                      styles.coachWideChoiceTitle,
+                      coachEnergy === energy && styles.coachWideChoiceTitleActive,
+                    ]}
+                  >
+                    {energy}
+                  </Text>
+                  <Text style={styles.coachWideChoiceSub}>
+                    {energy === "Ready"
+                      ? "Use the normal session structure."
+                      : energy === "Low Energy"
+                      ? "Keep the session shorter and more comfortable."
+                      : "Switch today to gentle mobility and recovery."}
+                  </Text>
+                </TouchableOpacity>
+              )
+            )}
+          </View>
+
+          <View style={styles.coachRecommendation}>
+            <Text style={styles.coachRecommendationLabel}>TODAY'S ADJUSTMENT</Text>
+            <Text style={styles.coachRecommendationTitle}>
+              {coachEnergy === "Recovery"
+                ? "Recovery & Mobility"
+                : coachEquipmentMode === "No Equipment Today"
+                ? "Bodyweight Session"
+                : coachEnergy === "Low Energy"
+                ? "Lighter Plan"
+                : "Your Plan, Adapted"}
+            </Text>
+            <Text style={styles.coachRecommendationText}>{coachSummary}</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.timerPrimaryButton}
+            onPress={startCoachWorkout}
+          >
+            <Text style={styles.timerPrimaryButtonText}>
+              START COACH SESSION
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={styles.coachSafetyText}>
+            Z Coach keeps the timer flexible. Good form and recovery matter more
+            than rushing to finish.
+          </Text>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
@@ -1695,7 +2005,8 @@ export default function App() {
           <DashboardCard
             emoji="✦"
             title="Z Coach"
-            subtitle="Build a workout"
+            subtitle="Adapt today's workout"
+            onPress={() => setStep(10)}
           />
 
           <DashboardCard
@@ -1730,7 +2041,10 @@ export default function App() {
             Your plan can adapt without making you restart.
           </Text>
 
-          <TouchableOpacity style={styles.coachButton}>
+          <TouchableOpacity
+            style={styles.coachButton}
+            onPress={() => setStep(10)}
+          >
             <Text style={styles.coachButtonText}>ASK Z COACH ✦</Text>
           </TouchableOpacity>
         </View>
@@ -1741,7 +2055,7 @@ export default function App() {
       <View style={styles.bottomNavigation}>
         <NavItem emoji="⌂" text="Home" active />
         <NavItem emoji="🏋️" text="Workout" />
-        <NavItem emoji="✦" text="Coach" />
+        <NavItem emoji="✦" text="Coach" onPress={() => setStep(10)} />
         <NavItem emoji="📈" text="Progress" onPress={() => setStep(8)} />
         <NavItem emoji="●" text="Profile" />
       </View>
@@ -3161,6 +3475,139 @@ const styles = StyleSheet.create({
   libraryFooterText: {
     color: COLORS.muted,
     lineHeight: 20,
+  },
+
+  coachScreen: {
+    padding: 22,
+    paddingTop: 34,
+    paddingBottom: 60,
+  },
+
+  coachScreenTitle: {
+    color: COLORS.white,
+    fontSize: 31,
+    lineHeight: 37,
+    fontWeight: "900",
+    marginTop: 7,
+  },
+
+  coachScreenSubtitle: {
+    color: COLORS.muted,
+    lineHeight: 21,
+    marginTop: 9,
+    marginBottom: 24,
+  },
+
+  coachQuestion: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "900",
+    marginBottom: 12,
+    marginTop: 8,
+  },
+
+  coachChoiceGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 10,
+    marginBottom: 22,
+  },
+
+  coachChoiceButton: {
+    width: "48%",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    paddingVertical: 15,
+    alignItems: "center",
+  },
+
+  coachChoiceButtonActive: {
+    backgroundColor: COLORS.green,
+    borderColor: COLORS.green,
+  },
+
+  coachChoiceText: {
+    color: COLORS.white,
+    fontWeight: "900",
+  },
+
+  coachChoiceTextActive: {
+    color: COLORS.background,
+  },
+
+  coachStack: {
+    gap: 10,
+    marginBottom: 22,
+  },
+
+  coachWideChoice: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    borderRadius: 18,
+    padding: 16,
+  },
+
+  coachWideChoiceActive: {
+    borderColor: COLORS.green,
+    backgroundColor: "#10160C",
+  },
+
+  coachWideChoiceTitle: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "900",
+  },
+
+  coachWideChoiceTitleActive: {
+    color: COLORS.green,
+  },
+
+  coachWideChoiceSub: {
+    color: COLORS.muted,
+    lineHeight: 19,
+    fontSize: 13,
+    marginTop: 5,
+  },
+
+  coachRecommendation: {
+    backgroundColor: "#10160C",
+    borderWidth: 1,
+    borderColor: "#2E4516",
+    borderRadius: 21,
+    padding: 18,
+    marginTop: 2,
+  },
+
+  coachRecommendationLabel: {
+    color: COLORS.green,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
+  coachRecommendationTitle: {
+    color: COLORS.white,
+    fontSize: 22,
+    fontWeight: "900",
+    marginTop: 6,
+  },
+
+  coachRecommendationText: {
+    color: COLORS.muted,
+    lineHeight: 20,
+    marginTop: 7,
+  },
+
+  coachSafetyText: {
+    color: COLORS.muted,
+    textAlign: "center",
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 12,
   },
 
   dashboard: {
