@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -22,6 +23,11 @@ type WorkoutExercise = {
   target: string;
   focus: string;
   cue: string;
+};
+
+type SetLog = {
+  reps: string;
+  weight: string;
 };
 
 const COLORS = {
@@ -56,6 +62,8 @@ export default function App() {
   const [workoutLength, setWorkoutLength] = useState<string | null>(null);
   const [completedSets, setCompletedSets] = useState<string[]>([]);
   const [completedWorkouts, setCompletedWorkouts] = useState(0);
+  const [setLogs, setSetLogs] = useState<Record<string, SetLog>>({});
+  const [previousSetLogs, setPreviousSetLogs] = useState<Record<string, SetLog>>({});
 
   const toggleEquipment = (item: string) => {
     if (item === "No Equipment") {
@@ -200,6 +208,51 @@ export default function App() {
     return target;
   };
 
+  const usesExternalWeight = (exercise: WorkoutExercise) => {
+    const weightedNames = [
+      "Goblet Squat",
+      "One-Arm Row",
+      "Floor Press",
+      "Romanian Deadlift",
+      "Standing Shoulder Press",
+      "Leg Press",
+      "Chest Press Machine",
+      "Lat Pulldown",
+      "Seated Leg Curl",
+      "Cable Row",
+      "Machine Shoulder Press",
+    ];
+
+    return weightedNames.includes(exercise.name);
+  };
+
+  const getResultLabel = (target: string) => {
+    const normalized = target.toLowerCase();
+
+    if (normalized.includes("sec")) return "Seconds";
+    if (normalized.includes("round")) return "Rounds";
+
+    return "Reps";
+  };
+
+  const updateSetLog = (
+    exerciseIndex: number,
+    setIndex: number,
+    field: keyof SetLog,
+    value: string
+  ) => {
+    const key = `${exerciseIndex}-${setIndex}`;
+
+    setSetLogs((current) => ({
+      ...current,
+      [key]: {
+        reps: current[key]?.reps ?? "",
+        weight: current[key]?.weight ?? "",
+        [field]: value,
+      },
+    }));
+  };
+
   const toggleSetComplete = (exerciseIndex: number, setIndex: number) => {
     const key = `${exerciseIndex}-${setIndex}`;
 
@@ -215,9 +268,24 @@ export default function App() {
       setCompletedWorkouts((current) =>
         Math.min(current + 1, trainingDays ?? current + 1)
       );
+
+      const completedLogs: Record<string, SetLog> = {};
+
+      completedSets.forEach((key) => {
+        const log = setLogs[key];
+
+        if (log && (log.reps || log.weight)) {
+          completedLogs[key] = log;
+        }
+      });
+
+      if (Object.keys(completedLogs).length > 0) {
+        setPreviousSetLogs(completedLogs);
+      }
     }
 
     setCompletedSets([]);
+    setSetLogs({});
     setStep(5);
   };
 
@@ -564,6 +632,15 @@ export default function App() {
             </Text>
           </View>
 
+          {Object.keys(previousSetLogs).length > 0 && (
+            <View style={styles.previousWorkoutNote}>
+              <Text style={styles.previousWorkoutNoteTitle}>Previous workout saved</Text>
+              <Text style={styles.previousWorkoutNoteText}>
+                Your last logged numbers will appear under each matching set.
+              </Text>
+            </View>
+          )}
+
           {workoutExercises.map((exercise, exerciseIndex) => {
             const setCount = getSetCount(exercise.target);
             const setTarget = getSetTarget(exercise.target);
@@ -598,43 +675,100 @@ export default function App() {
                   {Array.from({ length: setCount }).map((_, setIndex) => {
                     const key = `${exerciseIndex}-${setIndex}`;
                     const setDone = completedSets.includes(key);
+                    const currentLog = setLogs[key] ?? { reps: "", weight: "" };
+                    const previousLog = previousSetLogs[key];
+                    const weighted = usesExternalWeight(exercise);
+                    const resultLabel = getResultLabel(setTarget);
 
                     return (
-                      <TouchableOpacity
+                      <View
                         key={key}
                         style={[styles.setRow, setDone && styles.setRowDone]}
-                        onPress={() =>
-                          toggleSetComplete(exerciseIndex, setIndex)
-                        }
                       >
-                        <View style={styles.setInfo}>
-                          <Text
+                        <View style={styles.setTopRow}>
+                          <View style={styles.setInfo}>
+                            <Text
+                              style={[
+                                styles.setLabel,
+                                setDone && styles.setLabelDone,
+                              ]}
+                            >
+                              SET {setIndex + 1}
+                            </Text>
+                            <Text style={styles.setTarget}>{setTarget}</Text>
+                          </View>
+
+                          <TouchableOpacity
                             style={[
-                              styles.setLabel,
-                              setDone && styles.setLabelDone,
+                              styles.setCheck,
+                              setDone && styles.setCheckDone,
                             ]}
+                            onPress={() =>
+                              toggleSetComplete(exerciseIndex, setIndex)
+                            }
                           >
-                            SET {setIndex + 1}
-                          </Text>
-                          <Text style={styles.setTarget}>{setTarget}</Text>
+                            <Text
+                              style={[
+                                styles.setCheckText,
+                                setDone && styles.setCheckTextDone,
+                              ]}
+                            >
+                              {setDone ? "✓" : ""}
+                            </Text>
+                          </TouchableOpacity>
                         </View>
 
-                        <View
-                          style={[
-                            styles.setCheck,
-                            setDone && styles.setCheckDone,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.setCheckText,
-                              setDone && styles.setCheckTextDone,
-                            ]}
-                          >
-                            {setDone ? "✓" : ""}
+                        {previousLog && (previousLog.reps || previousLog.weight) && (
+                          <Text style={styles.previousSetText}>
+                            Previous: {previousLog.weight ? `${previousLog.weight} weight • ` : ""}
+                            {previousLog.reps
+                              ? `${previousLog.reps} ${getResultLabel(setTarget).toLowerCase()}`
+                              : ""}
                           </Text>
+                        )}
+
+                        <View style={styles.logInputRow}>
+                          {weighted && (
+                            <View style={styles.logInputWrap}>
+                              <Text style={styles.logInputLabel}>Weight</Text>
+                              <TextInput
+                                value={currentLog.weight}
+                                onChangeText={(value) =>
+                                  updateSetLog(
+                                    exerciseIndex,
+                                    setIndex,
+                                    "weight",
+                                    value.replace(/[^0-9.]/g, "")
+                                  )
+                                }
+                                placeholder="0"
+                                placeholderTextColor="#555555"
+                                keyboardType="decimal-pad"
+                                style={styles.logInput}
+                              />
+                            </View>
+                          )}
+
+                          <View style={styles.logInputWrap}>
+                            <Text style={styles.logInputLabel}>{resultLabel}</Text>
+                            <TextInput
+                              value={currentLog.reps}
+                              onChangeText={(value) =>
+                                updateSetLog(
+                                  exerciseIndex,
+                                  setIndex,
+                                  "reps",
+                                  value.replace(/[^0-9]/g, "")
+                                )
+                              }
+                              placeholder="0"
+                              placeholderTextColor="#555555"
+                              keyboardType="number-pad"
+                              style={styles.logInput}
+                            />
+                          </View>
                         </View>
-                      </TouchableOpacity>
+                      </View>
                     );
                   })}
                 </View>
@@ -704,6 +838,7 @@ export default function App() {
             style={styles.startButton}
             onPress={() => {
               setCompletedSets([]);
+              setSetLogs({});
               setStep(6);
             }}
           >
@@ -1276,21 +1411,22 @@ const styles = StyleSheet.create({
   },
 
   setRow: {
-    minHeight: 56,
     borderRadius: 15,
     backgroundColor: COLORS.cardSoft,
     borderWidth: 1,
     borderColor: COLORS.border,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    padding: 14,
   },
 
   setRowDone: {
     borderColor: COLORS.green,
     backgroundColor: "#151A0D",
+  },
+
+  setTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
 
   setInfo: {
@@ -1337,6 +1473,65 @@ const styles = StyleSheet.create({
 
   setCheckTextDone: {
     color: COLORS.background,
+  },
+
+  previousSetText: {
+    color: COLORS.green,
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 10,
+  },
+
+  logInputRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 12,
+  },
+
+  logInputWrap: {
+    flex: 1,
+  },
+
+  logInputLabel: {
+    color: COLORS.muted,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+
+  logInput: {
+    backgroundColor: COLORS.background,
+    color: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+
+  previousWorkoutNote: {
+    backgroundColor: "#10160C",
+    borderWidth: 1,
+    borderColor: "#2E4516",
+    borderRadius: 18,
+    padding: 15,
+    marginBottom: 20,
+  },
+
+  previousWorkoutNoteTitle: {
+    color: COLORS.green,
+    fontWeight: "900",
+    fontSize: 14,
+    marginBottom: 4,
+  },
+
+  previousWorkoutNoteText: {
+    color: COLORS.muted,
+    lineHeight: 19,
+    fontSize: 13,
   },
 
   finishWorkoutButton: {
