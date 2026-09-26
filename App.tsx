@@ -106,6 +106,7 @@ type PersistedAppData = {
   workoutDays: Weekday[];
   workoutLength: string | null;
   completedWorkouts: number;
+  completedPlanSessionIds: string[];
   workoutHistory: WorkoutHistoryItem[];
   weekKey: string;
   mealCategory: MealCategory;
@@ -822,6 +823,8 @@ export default function App() {
   const [editWorkoutLength, setEditWorkoutLength] = useState<string | null>(null);
   const [completedSets, setCompletedSets] = useState<string[]>([]);
   const [completedWorkouts, setCompletedWorkouts] = useState(0);
+  const [completedPlanSessionIds, setCompletedPlanSessionIds] = useState<string[]>([]);
+  const [activePlanSessionId, setActivePlanSessionId] = useState<string | null>(null);
   const [setLogs, setSetLogs] = useState<Record<string, SetLog>>({});
   const [previousSetLogs, setPreviousSetLogs] = useState<Record<string, SetLog>>({});
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
@@ -872,6 +875,7 @@ export default function App() {
     workoutDays,
     workoutLength,
     completedWorkouts,
+    completedPlanSessionIds,
     workoutHistory,
     weekKey: getCurrentWeekKey(),
     mealCategory,
@@ -952,8 +956,16 @@ export default function App() {
           ? parsed.completedWorkouts
           : 0
       );
+      setCompletedPlanSessionIds(
+        Array.isArray(parsed.completedPlanSessionIds)
+          ? parsed.completedPlanSessionIds.filter(
+              (item): item is string => typeof item === "string"
+            )
+          : []
+      );
     } else {
       setCompletedWorkouts(0);
+      setCompletedPlanSessionIds([]);
     }
 
     const hasSavedPlan =
@@ -1021,6 +1033,7 @@ export default function App() {
     workoutDays,
     workoutLength,
     completedWorkouts,
+    completedPlanSessionIds,
     workoutHistory,
     mealCategory,
     mealTiming,
@@ -1147,6 +1160,7 @@ export default function App() {
     workoutDays,
     workoutLength,
     completedWorkouts,
+    completedPlanSessionIds,
     workoutHistory,
     mealCategory,
     mealTiming,
@@ -1601,6 +1615,25 @@ export default function App() {
   const todayWeekday = getTodayWeekday();
   const todayPlanSession =
     weeklySessions.find((session) => session.day === todayWeekday) ?? null;
+  const todayPlanCompleted = !!todayPlanSession &&
+    completedPlanSessionIds.includes(todayPlanSession.id);
+
+  const nextPlanSession = useMemo(() => {
+    const todayIndex = WEEKDAYS.indexOf(todayWeekday);
+
+    return (
+      weeklySessions
+        .filter((session) => !completedPlanSessionIds.includes(session.id))
+        .sort((a, b) => {
+          const aIndex = a.day ? WEEKDAYS.indexOf(a.day) : todayIndex;
+          const bIndex = b.day ? WEEKDAYS.indexOf(b.day) : todayIndex;
+          const aDistance = (aIndex - todayIndex + 7) % 7;
+          const bDistance = (bIndex - todayIndex + 7) % 7;
+
+          return aDistance - bDistance;
+        })[0] ?? null
+    );
+  }, [weeklySessions, completedPlanSessionIds, todayWeekday]);
 
   const activeExercises = sessionExercises ?? workoutExercises;
   const activeWorkoutTitle = sessionTitle ?? todayWorkout;
@@ -1708,6 +1741,7 @@ export default function App() {
   const startTimedWorkout = () => {
     const firstExercise = workoutExercises[0];
 
+    setActivePlanSessionId(null);
     setSessionExercises(null);
     setSessionTitle(null);
     setSessionLength(null);
@@ -1795,6 +1829,7 @@ export default function App() {
   const startPlanSession = (session: WorkoutPlanSession) => {
     const firstExercise = session.exercises[0];
 
+    setActivePlanSessionId(session.id);
     setSessionExercises(session.exercises);
     setSessionTitle(session.title);
     setSessionLength(workoutLength);
@@ -1931,6 +1966,7 @@ export default function App() {
         ? "Light Coach Session"
         : "Z Coach Session";
 
+    setActivePlanSessionId(null);
     setSessionExercises(coachExercises);
     setSessionTitle(title);
     setSessionLength(coachTime);
@@ -1951,9 +1987,22 @@ export default function App() {
       plannedDuration: activeWorkoutLength ?? "Custom",
     };
 
-    setCompletedWorkouts((current) =>
-      Math.min(current + 1, trainingDays ?? current + 1)
-    );
+    const isNewPlannedCompletion =
+      !!activePlanSessionId &&
+      !completedPlanSessionIds.includes(activePlanSessionId);
+
+    if (!activePlanSessionId || isNewPlannedCompletion) {
+      setCompletedWorkouts((current) =>
+        Math.min(current + 1, trainingDays ?? current + 1)
+      );
+    }
+
+    if (activePlanSessionId && isNewPlannedCompletion) {
+      setCompletedPlanSessionIds((current) => [
+        ...current,
+        activePlanSessionId,
+      ]);
+    }
 
     setWorkoutHistory((current) => [
       {
@@ -1970,6 +2019,7 @@ export default function App() {
     setCompletedSets([]);
     setSetLogs({});
     setTimerRunning(false);
+    setActivePlanSessionId(null);
     setSessionExercises(null);
     setSessionTitle(null);
     setSessionLength(null);
@@ -2606,48 +2656,78 @@ export default function App() {
 
           <Text style={styles.workoutPlanSectionTitle}>Planned sessions</Text>
 
-          {weeklySessions.map((session, index) => (
-            <View key={session.id} style={styles.workoutPlanCard}>
-              <View style={styles.workoutPlanCardHeader}>
-                <View style={styles.workoutPlanIcon}>
-                  <Text style={styles.workoutPlanIconText}>{session.emoji}</Text>
-                </View>
+          {weeklySessions.map((session, index) => {
+            const completed = completedPlanSessionIds.includes(session.id);
 
-                <View style={styles.workoutPlanCardTitleWrap}>
-                  <Text style={styles.workoutPlanDay}>
-                    {session.day ?? `SESSION ${index + 1}`}
-                  </Text>
-                  <Text style={styles.workoutPlanCardTitle}>{session.title}</Text>
-                  <Text style={styles.workoutPlanCardMeta}>
-                    {session.focus} • {session.exercises.length} exercises
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.workoutPlanExercisePreview}>
-                {session.exercises.slice(0, 4).map((exercise) => (
-                  <Text
-                    key={`${session.id}-${exercise.name}`}
-                    style={styles.workoutPlanExerciseText}
-                  >
-                    • {exercise.name}
-                  </Text>
-                ))}
-                {session.exercises.length > 4 && (
-                  <Text style={styles.workoutPlanMoreText}>
-                    + {session.exercises.length - 4} more
-                  </Text>
-                )}
-              </View>
-
-              <TouchableOpacity
-                style={styles.workoutPlanStartButton}
-                onPress={() => startPlanSession(session)}
+            return (
+              <View
+                key={session.id}
+                style={[
+                  styles.workoutPlanCard,
+                  completed && styles.workoutPlanCardCompleted,
+                ]}
               >
-                <Text style={styles.workoutPlanStartText}>START SESSION</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+                <View style={styles.workoutPlanCardHeader}>
+                  <View style={styles.workoutPlanIcon}>
+                    <Text style={styles.workoutPlanIconText}>
+                      {completed ? "✓" : session.emoji}
+                    </Text>
+                  </View>
+
+                  <View style={styles.workoutPlanCardTitleWrap}>
+                    <View style={styles.workoutPlanDayRow}>
+                      <Text style={styles.workoutPlanDay}>
+                        {session.day ?? `SESSION ${index + 1}`}
+                      </Text>
+                      {completed && (
+                        <Text style={styles.workoutPlanCompletedBadge}>
+                          COMPLETE
+                        </Text>
+                      )}
+                    </View>
+                    <Text style={styles.workoutPlanCardTitle}>{session.title}</Text>
+                    <Text style={styles.workoutPlanCardMeta}>
+                      {session.focus} • {session.exercises.length} exercises
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.workoutPlanExercisePreview}>
+                  {session.exercises.slice(0, 4).map((exercise) => (
+                    <Text
+                      key={`${session.id}-${exercise.name}`}
+                      style={styles.workoutPlanExerciseText}
+                    >
+                      • {exercise.name}
+                    </Text>
+                  ))}
+                  {session.exercises.length > 4 && (
+                    <Text style={styles.workoutPlanMoreText}>
+                      + {session.exercises.length - 4} more
+                    </Text>
+                  )}
+                </View>
+
+                <TouchableOpacity
+                  disabled={completed}
+                  style={[
+                    styles.workoutPlanStartButton,
+                    completed && styles.workoutPlanStartButtonCompleted,
+                  ]}
+                  onPress={() => startPlanSession(session)}
+                >
+                  <Text
+                    style={[
+                      styles.workoutPlanStartText,
+                      completed && styles.workoutPlanStartTextCompleted,
+                    ]}
+                  >
+                    {completed ? "COMPLETED ✓" : "START SESSION"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
 
           <View style={styles.workoutPlanNote}>
             <Text style={styles.workoutPlanNoteTitle}>Keep it flexible</Text>
@@ -2935,6 +3015,7 @@ export default function App() {
             <TouchableOpacity
               onPress={() => {
                 setTimerRunning(false);
+                setActivePlanSessionId(null);
                 setSessionExercises(null);
                 setSessionTitle(null);
                 setSessionLength(null);
@@ -4026,10 +4107,18 @@ export default function App() {
           <View style={styles.todayTopRow}>
             <View style={styles.todayTextWrap}>
               <Text style={styles.todayLabel}>
-                {todayPlanSession ? `${todayWeekday} • TODAY'S WORKOUT` : `${todayWeekday} • FLEXIBLE DAY`}
+                {todayPlanSession
+                  ? todayPlanCompleted
+                    ? `${todayWeekday} • COMPLETE`
+                    : `${todayWeekday} • TODAY'S WORKOUT`
+                  : `${todayWeekday} • FLEXIBLE DAY`}
               </Text>
               <Text style={styles.todayTitle}>
-                {todayPlanSession ? todayPlanSession.title : "No planned session today"}
+                {todayPlanSession
+                  ? todayPlanCompleted
+                    ? "Today's planned session is done"
+                    : todayPlanSession.title
+                  : "No planned session today"}
               </Text>
             </View>
 
@@ -4041,21 +4130,29 @@ export default function App() {
             <Text style={styles.detailText}>•</Text>
             <Text style={styles.detailText}>
               {todayPlanSession
-                ? todayPlanSession.focus
-                : "Rest, recover, or choose another session"}
+                ? todayPlanCompleted
+                  ? nextPlanSession
+                    ? `Next planned: ${nextPlanSession.day} • ${nextPlanSession.title}`
+                    : "Your planned sessions are complete for this week"
+                  : todayPlanSession.focus
+                : nextPlanSession
+                ? `Next planned: ${nextPlanSession.day} • ${nextPlanSession.title}`
+                : "Rest and recovery are part of the plan"}
             </Text>
           </View>
 
           <TouchableOpacity
             style={styles.startButton}
             onPress={() =>
-              todayPlanSession
+              todayPlanSession && !todayPlanCompleted
                 ? startPlanSession(todayPlanSession)
                 : setStep(13)
             }
           >
             <Text style={styles.startButtonText}>
-              {todayPlanSession ? "START TODAY'S SESSION" : "VIEW WEEKLY PLAN"}
+              {todayPlanSession && !todayPlanCompleted
+                ? "START TODAY'S SESSION"
+                : "VIEW WEEKLY PLAN"}
             </Text>
           </TouchableOpacity>
 
@@ -4847,6 +4944,11 @@ const styles = StyleSheet.create({
     marginBottom: 13,
   },
 
+  workoutPlanCardCompleted: {
+    borderColor: "#365018",
+    backgroundColor: "#0D130A",
+  },
+
   workoutPlanCardHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -4870,11 +4972,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  workoutPlanDayRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+
   workoutPlanDay: {
     color: COLORS.green,
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 1,
+  },
+
+  workoutPlanCompletedBadge: {
+    color: COLORS.green,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.8,
   },
 
   workoutPlanCardTitle: {
@@ -4919,11 +5035,21 @@ const styles = StyleSheet.create({
     marginTop: 13,
   },
 
+  workoutPlanStartButtonCompleted: {
+    backgroundColor: "#1A2410",
+    borderWidth: 1,
+    borderColor: "#365018",
+  },
+
   workoutPlanStartText: {
     color: COLORS.background,
     fontWeight: "900",
     fontSize: 13,
     letterSpacing: 0.6,
+  },
+
+  workoutPlanStartTextCompleted: {
+    color: COLORS.green,
   },
 
   workoutPlanNote: {
