@@ -48,6 +48,14 @@ type MealRecipe = {
   steps: string[];
 };
 
+type WorkoutHistoryItem = {
+  id: string;
+  title: string;
+  completedAt: string;
+  exercises: number;
+  plannedDuration: string;
+};
+
 const COLORS = {
   background: "#080808",
   card: "#111111",
@@ -164,6 +172,7 @@ export default function App() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [mealCategory, setMealCategory] = useState<MealCategory>("All");
   const [mealSearch, setMealSearch] = useState("");
+  const [workoutHistory, setWorkoutHistory] = useState<WorkoutHistoryItem[]>([]);
 
   const toggleEquipment = (item: string) => {
     if (item === "No Equipment") {
@@ -407,6 +416,18 @@ export default function App() {
     setCompletedWorkouts((current) =>
       Math.min(current + 1, trainingDays ?? current + 1)
     );
+
+    setWorkoutHistory((current) => [
+      {
+        id: `${Date.now()}`,
+        title: todayWorkout,
+        completedAt: new Date().toISOString(),
+        exercises: workoutExercises.length,
+        plannedDuration: workoutLength ?? "Custom",
+      },
+      ...current,
+    ]);
+
     setCompletedSets([]);
     setSetLogs({});
     setTimerRunning(false);
@@ -505,6 +526,10 @@ export default function App() {
     currentExerciseIndex,
     currentSetIndex,
   ]);
+
+  const weeklyProgressPercent = trainingDays
+    ? Math.min(100, Math.round((completedWorkouts / trainingDays) * 100))
+    : 0;
 
   const filteredMeals = useMemo(() => {
     const query = mealSearch.trim().toLowerCase();
@@ -1135,6 +1160,122 @@ export default function App() {
   }
 
 
+  if (step === 8) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+
+        <ScrollView
+          contentContainerStyle={styles.progressScreen}
+          showsVerticalScrollIndicator={false}
+        >
+          <TouchableOpacity onPress={() => setStep(5)}>
+            <Text style={styles.workoutBack}>‹ Back home</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.workoutScreenLabel}>Z PROGRESS</Text>
+          <Text style={styles.progressScreenTitle}>Your training activity</Text>
+          <Text style={styles.progressScreenSubtitle}>
+            Track completed sessions and consistency without turning training
+            into a race.
+          </Text>
+
+          <View style={styles.progressStatGrid}>
+            <View style={styles.progressStatCard}>
+              <Text style={styles.progressStatValue}>{workoutHistory.length}</Text>
+              <Text style={styles.progressStatLabel}>Total sessions</Text>
+            </View>
+
+            <View style={styles.progressStatCard}>
+              <Text style={styles.progressStatValue}>
+                {completedWorkouts}/{trainingDays ?? "-"}
+              </Text>
+              <Text style={styles.progressStatLabel}>This week</Text>
+            </View>
+
+            <View style={styles.progressStatCard}>
+              <Text style={styles.progressStatValue}>{workoutLength ?? "-"}</Text>
+              <Text style={styles.progressStatLabel}>Planned length</Text>
+            </View>
+
+            <View style={styles.progressStatCard}>
+              <Text style={styles.progressStatValue}>
+                {workoutExercises.length}
+              </Text>
+              <Text style={styles.progressStatLabel}>Exercises/session</Text>
+            </View>
+          </View>
+
+          <View style={styles.progressGoalCard}>
+            <View style={styles.progressGoalHeader}>
+              <View>
+                <Text style={styles.progressGoalLabel}>WEEKLY PLAN</Text>
+                <Text style={styles.progressGoalValue}>
+                  {weeklyProgressPercent}% complete
+                </Text>
+              </View>
+              <Text style={styles.progressGoalCount}>
+                {completedWorkouts}/{trainingDays ?? "-"}
+              </Text>
+            </View>
+
+            <View style={styles.progressScreenBarBackground}>
+              <View
+                style={[
+                  styles.progressScreenBarFill,
+                  { width: `${weeklyProgressPercent}%` },
+                ]}
+              />
+            </View>
+
+            <Text style={styles.progressGoalNote}>
+              Rest days count as part of a balanced plan too.
+            </Text>
+          </View>
+
+          <Text style={styles.progressSectionTitle}>Recent activity</Text>
+
+          {workoutHistory.length === 0 ? (
+            <View style={styles.progressEmptyCard}>
+              <Text style={styles.progressEmptyTitle}>No completed sessions yet</Text>
+              <Text style={styles.progressEmptyText}>
+                Finish a guided workout and it will appear here.
+              </Text>
+            </View>
+          ) : (
+            workoutHistory.slice(0, 8).map((item) => (
+              <View key={item.id} style={styles.historyCard}>
+                <View style={styles.historyIcon}>
+                  <Text style={styles.historyIconText}>✓</Text>
+                </View>
+
+                <View style={styles.historyContent}>
+                  <Text style={styles.historyTitle}>{item.title}</Text>
+                  <Text style={styles.historyMeta}>
+                    {new Date(item.completedAt).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    })}{" "}
+                    • {item.exercises} exercises • {item.plannedDuration}
+                  </Text>
+                </View>
+              </View>
+            ))
+          )}
+
+          <View style={styles.progressMindsetCard}>
+            <Text style={styles.progressMindsetTitle}>Consistency over perfection</Text>
+            <Text style={styles.progressMindsetText}>
+              A shorter session or an extra recovery day can still be part of a
+              healthy routine.
+            </Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
@@ -1232,6 +1373,7 @@ export default function App() {
             emoji="📈"
             title="Progress"
             subtitle="View your stats"
+            onPress={() => setStep(8)}
           />
 
           <DashboardCard
@@ -1263,7 +1405,7 @@ export default function App() {
         <NavItem emoji="⌂" text="Home" active />
         <NavItem emoji="🏋️" text="Workout" />
         <NavItem emoji="✦" text="Coach" />
-        <NavItem emoji="📈" text="Progress" />
+        <NavItem emoji="📈" text="Progress" onPress={() => setStep(8)} />
         <NavItem emoji="●" text="Profile" />
       </View>
     </SafeAreaView>
@@ -1330,13 +1472,15 @@ function NavItem({
   emoji,
   text,
   active = false,
+  onPress,
 }: {
   emoji: string;
   text: string;
   active?: boolean;
+  onPress?: () => void;
 }) {
   return (
-    <TouchableOpacity style={styles.navItem}>
+    <TouchableOpacity style={styles.navItem} onPress={onPress}>
       <Text style={[styles.navEmoji, active && styles.activeNav]}>{emoji}</Text>
       <Text style={[styles.navText, active && styles.activeNav]}>{text}</Text>
     </TouchableOpacity>
@@ -2261,6 +2405,204 @@ const styles = StyleSheet.create({
   },
 
   mealNoteText: {
+    color: COLORS.muted,
+    lineHeight: 20,
+  },
+
+  progressScreen: {
+    padding: 22,
+    paddingTop: 34,
+    paddingBottom: 60,
+  },
+
+  progressScreenTitle: {
+    color: COLORS.white,
+    fontSize: 31,
+    lineHeight: 37,
+    fontWeight: "900",
+    marginTop: 7,
+  },
+
+  progressScreenSubtitle: {
+    color: COLORS.muted,
+    lineHeight: 21,
+    marginTop: 9,
+    marginBottom: 22,
+  },
+
+  progressStatGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 12,
+    marginBottom: 18,
+  },
+
+  progressStatCard: {
+    width: "48%",
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    padding: 17,
+    minHeight: 105,
+  },
+
+  progressStatValue: {
+    color: COLORS.white,
+    fontSize: 25,
+    fontWeight: "900",
+  },
+
+  progressStatLabel: {
+    color: COLORS.muted,
+    fontSize: 12,
+    marginTop: 6,
+  },
+
+  progressGoalCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 26,
+  },
+
+  progressGoalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+
+  progressGoalLabel: {
+    color: COLORS.green,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
+  progressGoalValue: {
+    color: COLORS.white,
+    fontSize: 21,
+    fontWeight: "900",
+    marginTop: 5,
+  },
+
+  progressGoalCount: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+
+  progressScreenBarBackground: {
+    height: 9,
+    borderRadius: 10,
+    backgroundColor: "#222222",
+    marginTop: 17,
+  },
+
+  progressScreenBarFill: {
+    height: "100%",
+    borderRadius: 10,
+    backgroundColor: COLORS.green,
+  },
+
+  progressGoalNote: {
+    color: COLORS.muted,
+    fontSize: 12,
+    marginTop: 10,
+  },
+
+  progressSectionTitle: {
+    color: COLORS.white,
+    fontSize: 21,
+    fontWeight: "900",
+    marginBottom: 13,
+  },
+
+  progressEmptyCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 18,
+  },
+
+  progressEmptyTitle: {
+    color: COLORS.white,
+    fontSize: 17,
+    fontWeight: "900",
+  },
+
+  progressEmptyText: {
+    color: COLORS.muted,
+    lineHeight: 20,
+    marginTop: 5,
+  },
+
+  historyCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 18,
+    padding: 15,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  historyIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    backgroundColor: "#151A0D",
+    borderWidth: 1,
+    borderColor: "#2E4516",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+
+  historyIconText: {
+    color: COLORS.green,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+
+  historyContent: {
+    flex: 1,
+  },
+
+  historyTitle: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+
+  historyMeta: {
+    color: COLORS.muted,
+    fontSize: 12,
+    marginTop: 4,
+  },
+
+  progressMindsetCard: {
+    backgroundColor: "#10160C",
+    borderWidth: 1,
+    borderColor: "#2E4516",
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 10,
+  },
+
+  progressMindsetTitle: {
+    color: COLORS.green,
+    fontWeight: "900",
+    marginBottom: 5,
+  },
+
+  progressMindsetText: {
     color: COLORS.muted,
     lineHeight: 20,
   },
