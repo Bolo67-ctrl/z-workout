@@ -1936,7 +1936,25 @@ export default function App() {
     setEquipment(editEquipment);
     setTrainingDays(editTrainingDays);
     setWorkoutDays(sortWorkoutDays(editWorkoutDays));
+    const sortedEditWorkoutDays = sortWorkoutDays(editWorkoutDays);
+    const planChanged =
+      workoutPlace !== editWorkoutPlace ||
+      goal !== editGoal ||
+      workoutLength !== editWorkoutLength ||
+      trainingDays !== editTrainingDays ||
+      equipment.length !== editEquipment.length ||
+      equipment.some((item) => !editEquipment.includes(item)) ||
+      workoutDays.length !== sortedEditWorkoutDays.length ||
+      workoutDays.some((day, index) => day !== sortedEditWorkoutDays[index]);
+
     setWorkoutLength(editWorkoutLength);
+
+    // Session IDs come from the plan structure. Clear old planned checkmarks
+    // when that structure changes so they cannot point at new sessions.
+    if (planChanged) {
+      setCompletedPlanSessionIds([]);
+    }
+
     setCompletedWorkouts((current) => Math.min(current, editTrainingDays));
     setStep(13);
   };
@@ -2356,8 +2374,12 @@ export default function App() {
       ? `A ${coachTime} session based on your next planned workout.`
       : `A ${coachTime} ${coachFocus.toLowerCase()} session matched to your current equipment.`;
 
+  const plannedCompletedCount = weeklySessions.filter((session) =>
+    completedPlanSessionIds.includes(session.id)
+  ).length;
+
   const weeklyProgressPercent = trainingDays
-    ? Math.min(100, Math.round((completedWorkouts / trainingDays) * 100))
+    ? Math.min(100, Math.round((plannedCompletedCount / trainingDays) * 100))
     : 0;
 
   const progressWeeks = useMemo(() => {
@@ -2944,7 +2966,7 @@ export default function App() {
 
           <View style={styles.workoutPlanProgressRow}>
             <Text style={styles.workoutPlanProgressText}>
-              {completedWorkouts}/{trainingDays ?? "-"} completed this week
+              {plannedCompletedCount}/{trainingDays ?? "-"} planned sessions completed this week
             </Text>
             <Text style={styles.workoutPlanProgressPercent}>
               {weeklyProgressPercent}%
@@ -3670,7 +3692,7 @@ export default function App() {
 
   if (step === 12 && lastWorkoutSummary) {
     const weeklyTarget = trainingDays ?? 0;
-    const weeklyRemaining = Math.max(weeklyTarget - completedWorkouts, 0);
+    const weeklyRemaining = Math.max(weeklyTarget - plannedCompletedCount, 0);
 
     return (
       <SafeAreaView style={styles.container}>
@@ -4073,9 +4095,9 @@ export default function App() {
 
             <View style={styles.progressStatCard}>
               <Text style={styles.progressStatValue}>
-                {completedWorkouts}/{trainingDays ?? "-"}
+                {plannedCompletedCount}/{trainingDays ?? "-"}
               </Text>
-              <Text style={styles.progressStatLabel}>This week</Text>
+              <Text style={styles.progressStatLabel}>Planned this week</Text>
             </View>
 
             <View style={styles.progressStatCard}>
@@ -4098,7 +4120,7 @@ export default function App() {
                 </Text>
               </View>
               <Text style={styles.progressGoalCount}>
-                {completedWorkouts}/{trainingDays ?? "-"}
+                {plannedCompletedCount}/{trainingDays ?? "-"}
               </Text>
             </View>
 
@@ -5029,16 +5051,16 @@ export default function App() {
         <View style={styles.progressCard}>
           <View>
             <Text style={styles.progressNumber}>
-              {completedWorkouts} / {trainingDays}
+              {plannedCompletedCount} / {trainingDays}
             </Text>
-            <Text style={styles.progressLabel}>Workouts completed</Text>
+            <Text style={styles.progressLabel}>Planned sessions completed</Text>
           </View>
 
           <View style={styles.streakBox}>
             <Text style={styles.streakNumber}>
-              {Math.max((trainingDays ?? 0) - completedWorkouts, 0)}
+              {Math.max((trainingDays ?? 0) - plannedCompletedCount, 0)}
             </Text>
-            <Text style={styles.streakLabel}>Sessions remaining</Text>
+            <Text style={styles.streakLabel}>Planned sessions remaining</Text>
           </View>
         </View>
 
@@ -5047,7 +5069,7 @@ export default function App() {
             style={[
               styles.progressBarFill,
               {
-                width: `${trainingDays ? (completedWorkouts / trainingDays) * 100 : 0}%`,
+                width: `${weeklyProgressPercent}%`,
               },
             ]}
           />
