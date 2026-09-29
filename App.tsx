@@ -76,6 +76,9 @@ type WorkoutHistoryItem = {
   completedAt: string;
   exercises: number;
   plannedDuration: string;
+  exerciseDetails?: WorkoutExercise[];
+  completedSets?: string[];
+  setLogs?: Record<string, SetLog>;
 };
 
 type ExerciseCategory =
@@ -921,6 +924,8 @@ export default function App() {
   const [recommendedMealsOnly, setRecommendedMealsOnly] = useState(true);
   const [expandedMeal, setExpandedMeal] = useState<string | null>(null);
   const [workoutHistory, setWorkoutHistory] = useState<WorkoutHistoryItem[]>([]);
+  const [selectedHistoryItem, setSelectedHistoryItem] =
+    useState<WorkoutHistoryItem | null>(null);
   const [exerciseCategory, setExerciseCategory] = useState<ExerciseCategory>("All");
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [expandedExercise, setExpandedExercise] = useState<string | null>(null);
@@ -2244,6 +2249,9 @@ export default function App() {
         completedAt: new Date().toISOString(),
         exercises: summary.exercises,
         plannedDuration: summary.plannedDuration,
+        exerciseDetails: activeExercises,
+        completedSets: [...completedSets],
+        setLogs: { ...setLogs },
       },
       ...current,
     ]);
@@ -4210,7 +4218,118 @@ export default function App() {
 
           <Text style={styles.progressSectionTitle}>Recent activity</Text>
 
-          {workoutHistory.length === 0 ? (
+          {selectedHistoryItem ? (
+            <View style={styles.historyDetailCard}>
+              <View style={styles.historyDetailHeader}>
+                <View style={styles.historyIcon}>
+                  <Text style={styles.historyIconText}>✓</Text>
+                </View>
+                <View style={styles.historyDetailHeaderText}>
+                  <Text style={styles.historyTitle}>
+                    {selectedHistoryItem.title}
+                  </Text>
+                  <Text style={styles.historyMeta}>
+                    {new Date(selectedHistoryItem.completedAt).toLocaleDateString(
+                      undefined,
+                      {
+                        month: "short",
+                        day: "numeric",
+                        year:
+                          new Date(selectedHistoryItem.completedAt).getFullYear() !==
+                          new Date().getFullYear()
+                            ? "numeric"
+                            : undefined,
+                      }
+                    )}{" "}
+                    • {selectedHistoryItem.exercises} exercises •{" "}
+                    {selectedHistoryItem.plannedDuration}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.historyDetailLabel}>WORKOUT DETAILS</Text>
+
+              {(selectedHistoryItem.exerciseDetails ?? []).map(
+                (exercise, exerciseIndex) => {
+                  const setCount = getSetCount(exercise.target);
+                  const completedCount =
+                    selectedHistoryItem.completedSets?.filter((key) =>
+                      key.startsWith(`${exerciseIndex}-`)
+                    ).length ?? 0;
+
+                  return (
+                    <View
+                      key={`${selectedHistoryItem.id}-${exerciseIndex}`}
+                      style={styles.historyExerciseRow}
+                    >
+                      <View style={styles.historyExerciseNumber}>
+                        <Text style={styles.historyExerciseNumberText}>
+                          {exerciseIndex + 1}
+                        </Text>
+                      </View>
+
+                      <View style={styles.historyExerciseContent}>
+                        <Text style={styles.historyExerciseName}>
+                          {exercise.name}
+                        </Text>
+                        <Text style={styles.historyExerciseMeta}>
+                          {exercise.target} • {exercise.focus}
+                        </Text>
+
+                        <View style={styles.historySetSummary}>
+                          <Text style={styles.historySetSummaryText}>
+                            {completedCount > 0
+                              ? `${completedCount}/${setCount} sets marked complete`
+                              : "No sets were manually marked"}
+                          </Text>
+                        </View>
+
+                        {Array.from({ length: setCount }, (_, setIndex) => {
+                          const key = `${exerciseIndex}-${setIndex}`;
+                          const log = selectedHistoryItem.setLogs?.[key];
+                          const wasCompleted =
+                            selectedHistoryItem.completedSets?.includes(key);
+
+                          if (!log?.reps && !log?.weight && !wasCompleted) {
+                            return null;
+                          }
+
+                          return (
+                            <Text
+                              key={`${selectedHistoryItem.id}-${key}`}
+                              style={styles.historySetLogText}
+                            >
+                              Set {setIndex + 1}
+                              {wasCompleted ? " ✓" : ""}
+                              {log?.reps ? ` • ${log.reps} reps` : ""}
+                              {log?.weight ? ` • ${log.weight} weight` : ""}
+                            </Text>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  );
+                }
+              )}
+
+              {(!selectedHistoryItem.exerciseDetails ||
+                selectedHistoryItem.exerciseDetails.length === 0) && (
+                <Text style={styles.historyDetailEmpty}>
+                  This workout was completed before detailed exercise tracking
+                  was added.
+                </Text>
+              )}
+
+              <TouchableOpacity
+                style={styles.historyBackButton}
+                onPress={() => setSelectedHistoryItem(null)}
+              >
+                <Text style={styles.historyBackButtonText}>
+                  BACK TO RECENT ACTIVITY
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : workoutHistory.length === 0 ? (
             <View style={styles.progressEmptyCard}>
               <Text style={styles.progressEmptyTitle}>
                 No completed sessions yet
@@ -4221,7 +4340,11 @@ export default function App() {
             </View>
           ) : (
             workoutHistory.slice(0, 10).map((item) => (
-              <View key={item.id} style={styles.historyCard}>
+              <TouchableOpacity
+                key={item.id}
+                style={styles.historyCard}
+                onPress={() => setSelectedHistoryItem(item)}
+              >
                 <View style={styles.historyIcon}>
                   <Text style={styles.historyIconText}>✓</Text>
                 </View>
@@ -4240,8 +4363,11 @@ export default function App() {
                     })}{" "}
                     • {item.exercises} exercises • {item.plannedDuration}
                   </Text>
+                  <Text style={styles.historyTapHint}>
+                    Tap to view workout details ›
+                  </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))
           )}
 
@@ -7490,6 +7616,125 @@ const styles = StyleSheet.create({
     color: COLORS.muted,
     lineHeight: 20,
     marginTop: 5,
+  },
+
+  historyDetailCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12,
+  },
+
+  historyDetailHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 18,
+  },
+
+  historyDetailHeaderText: {
+    flex: 1,
+    marginLeft: 11,
+  },
+
+  historyDetailLabel: {
+    color: COLORS.green,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+
+  historyExerciseRow: {
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingVertical: 13,
+  },
+
+  historyExerciseNumber: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: COLORS.green,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+
+  historyExerciseNumberText: {
+    color: COLORS.background,
+    fontSize: 11,
+    fontWeight: "900",
+  },
+
+  historyExerciseContent: {
+    flex: 1,
+  },
+
+  historyExerciseName: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: "900",
+  },
+
+  historyExerciseMeta: {
+    color: COLORS.muted,
+    fontSize: 11,
+    lineHeight: 17,
+    marginTop: 3,
+  },
+
+  historySetSummary: {
+    marginTop: 8,
+    backgroundColor: COLORS.cardSoft,
+    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+  },
+
+  historySetSummaryText: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: "800",
+  },
+
+  historySetLogText: {
+    color: COLORS.muted,
+    fontSize: 10,
+    marginTop: 5,
+  },
+
+  historyDetailEmpty: {
+    color: COLORS.muted,
+    lineHeight: 19,
+    paddingVertical: 8,
+  },
+
+  historyBackButton: {
+    minHeight: 48,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.cardSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+  },
+
+  historyBackButtonText: {
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
+
+  historyTapHint: {
+    color: COLORS.green,
+    fontSize: 10,
+    fontWeight: "800",
+    marginTop: 8,
   },
 
   historyCard: {
